@@ -1,4 +1,4 @@
-/* this doesn't really belong here, but the web interface for github is so ridiculous and I didn't want to fool with the CLI, here it is for now */
+/* this doesn't really belong here, but the web interface for github is so ridiculous and I didn't want to fool with the CLI, here it is for now... */
 
 /*from https://sites.google.com/site/proyectosroboticos/bresenham-6d*/
 const bresenham6d_min = function(a, f, o, i, r, s, t, b, h, n, M, c, e) {

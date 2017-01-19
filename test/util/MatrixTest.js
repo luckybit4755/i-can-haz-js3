@@ -11,7 +11,6 @@ const MatrixTest = function() {
 		var matrix = new Matrix();
 		var m1, m2, rz;
 
-
 		matrix.common();
 
 		console.log( '-----------' );
