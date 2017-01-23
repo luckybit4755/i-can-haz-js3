@@ -1,0 +1,225 @@
+<HTML>
+	<HEAD>
+		<TITLE>BxoTest</TITLE>
+
+		<style>
+			body {
+				font-family: Comic Sans MS, sans;
+                background:black;
+            }
+			div {
+				padding-left: 3em;
+				color:#FF9;
+			}
+            canvas {
+                width:512px;
+                height:512px;
+                margin: auto;
+                display: block;
+                padding-top:66px;
+            }
+			img {
+				display:none;
+			}
+		</style>
+
+        <script src="../../src/util/Matrix.js"></script>
+        <script src="../../src/weak/TriangularB6.js"></script>
+        <script>
+			window.onload = function() {
+				const matrix = new Matrix().common();
+
+				const canvas = document.getElementsByTagName( 'canvas' )[ 0 ];
+				const tb6 = new TriangularB6( canvas );
+
+				const w = parseInt( canvas.width );
+				const h = parseInt( canvas.height );
+
+				var sides = [];
+				for ( var i = 0 ; i < 6 ; i++ ) sides.push( [] );
+
+				console.log( 'making sides' );
+
+				var size = 0.95;
+
+				var inc = 1 / 4;
+				for ( var x = -1 ; x <= 1 ; x+= inc ) {
+					var rows = [];
+					for ( var i = 0 ; i < 6 ; i++ ) {
+						var row = [];
+						sides[ i ].push( row );
+						rows.push( row );
+					}
+					var fx = x * size;
+					for ( var y = -1 ; y <= 1 ; y+= inc ) {
+						var fy = y * size;
+						var i = 0;
+						rows[ i++ ].push( matrix.point( fx, fy, -size ) );
+						rows[ i++ ].push( matrix.point( fx, fy, +size ) );
+						rows[ i++ ].push( matrix.point( fx, -size, fy ) );
+						rows[ i++ ].push( matrix.point( fx, +size, fy ) );
+						rows[ i++ ].push( matrix.point( -size, fx, fy ) );
+						rows[ i++ ].push( matrix.point( +size, fx, fy ) );
+					}
+				}
+
+				var iteration = 0;
+				var which = 0;
+				var angles = [0,0,0];
+				var ooo = 0;
+				var ood = 0.02;
+
+				var w2 = w * 0.5;
+				var w3 = w * 0.28;
+
+				const toColor = function( v ) {
+					return Math.floor( ( v + 1 ) / 2.0 * 255 ) % 255;
+				};
+
+				const makePoint = function( pt, og ) {
+					var x = pt[ 0 ][ 0 ];
+					var y = pt[ 1 ][ 0 ];
+					var z = pt[ 2 ][ 0 ];
+					
+					var ox = og[ 0 ][ 0 ];
+					var oy = og[ 1 ][ 0 ];
+					var oz = og[ 2 ][ 0 ];
+
+					var s = toColor( ( ox + oz )  );
+					var t = toColor( ( oy + oz )  );
+
+					var tmp = ooo;
+					if ( tmp > 1 ) tmp = 1;
+					if ( tmp < 0 ) tmp = 0;
+
+					var xxx = 1.0 - tmp;
+
+					var sz = Math.sqrt( x * x + y * y + z * z );
+					x = ( x / sz * tmp ) + ( x * xxx );
+					y = ( y / sz * tmp ) + ( y * xxx );
+					z = ( z / sz * tmp ) + ( z * xxx );
+
+					var px = Math.floor( w2 + x * w3 );
+					var py = Math.floor( w2 + y * w3 );
+
+					return {
+						 x:px
+						, y:py
+						, z:z
+						, r: tb6.texture ?  s : toColor( ox )
+						, g: tb6.texture ?  t : toColor( oy )
+						, b: tb6.texture ? -1 : toColor( oz )
+					};
+				};
+
+				const triangle = function( rotations, p1, p2, p3 ) {
+					//console.log( 'p1:' + JSON.stringify( p1 ) );
+
+					var t1 = matrix.multiply( rotations, p1 );
+					var t2 = matrix.multiply( rotations, p2 );
+					var t3 = matrix.multiply( rotations, p3 );
+
+					//console.log( 't1:' + JSON.stringify( t1 ) );
+
+					var pt1 = makePoint( t1, p1 );
+					var pt2 = makePoint( t2, p2 );
+					var pt3 = makePoint( t3, p3 );
+					
+					//console.log( 'pt1:' + JSON.stringify( pt1 ) );
+					//console.log( 'pt2:' + JSON.stringify( pt2 ) );
+					//console.log( 'pt3:' + JSON.stringify( pt3 ) );
+
+					tb6.triangleDraw( pt1, pt2, pt3 );
+				};
+
+				var time = 0;
+				var triangles = 0;
+
+				var info = document.getElementsByTagName( 'div' )[ 0 ];
+
+				var comma = function( n ) {
+					return ( '' + n ).replace( /\d{1,3}(?=(\d{3})+(?!\d))/g, '$&,' );
+				};
+
+				var begin = new Date().getTime() / 1000.0;
+
+				var angle_increment = 0.08;
+
+				const drawWrapper = function() {
+					var start = new Date().getTime() / 1000.0;
+
+					tb6.clear();
+					var rotations = matrix.makeRotations( angles[ 0 ], angles[ 1 ], angles[ 2 ] );
+					angles[ which ] += angle_increment;
+					if ( 0 == ++iteration % 44 ) which = ( which + 1 ) % 3;
+
+					if ( 0 == iteration % 33 ) {
+						var tps = comma( Math.floor( triangles / time ) );
+						var trz = comma( triangles );
+						var secz = comma( Math.floor( time * 10 )  / 10.0 );
+						var overall = comma( Math.floor( ( start - begin ) * 10 ) / 10.0 );
+						info.innerHTML = ( ''
+							+ tps + ' triangles per second<br/>' 
+							+ trz + ' triangles in ' + secz + ' seconds drawing<br/>' 
+							+ overall + ' seconds total'
+						);
+						console.log( info.innerHTML );
+					}
+
+					ooo += ood;
+					if ( ooo > 2 ) {
+						ooo = 1;
+						ood *= -1;
+					} else {
+						if ( ooo < -1 ) {
+							ooo = 0;
+							ood *= -1;
+						}
+					}
+
+					sides.forEach(
+						function( side ) {
+							for ( var i = 0 ; i < side.length - 1 ; i++ ) {
+								var row1 = side[ i ];
+								var row2 = side[ i + 1];
+
+								for ( var j = 0 ; j < row1.length - 1 ; j++ ) {
+									triangle( rotations, row1[ j ], row1[ j + 1 ], row2[ j ] );
+									triangle( rotations, row1[ j + 1 ], row2[ j + 1 ], row2[ j ] );
+									triangles += 2;
+								}
+							}
+						}
+					);
+
+					tb6.flush();
+
+					if ( true ) {
+						if ( !tb6.texture ) { 
+							var image = document.getElementsByTagName( 'img' )[ 0 ];
+							tb6.context.drawImage( image, 0, 0 );
+
+							var imageData = tb6.context.getImageData( 0, 0, 256, 256 );
+							tb6.setTexture( imageData.data, 256, 256 );
+						}
+					}
+
+					var end = new Date().getTime() / 1000.0;
+					time += ( end - start );
+
+					setTimeout(
+						function() {
+							requestAnimationFrame( drawWrapper );
+						}, 1000 / 64
+					);
+				};
+				drawWrapper();
+			}
+		</script>
+	</HEAD>
+	<BODY>
+		<canvas width="512" height="512"></canvas>
+		<div>u&lt;3 it!</div>
+		<img src="images/water-texture.jpg"></img>
+	</BODY>
+</HTML>
