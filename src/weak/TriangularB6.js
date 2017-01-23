@@ -130,13 +130,13 @@ const TriangularB6 = function(canvas) {
         if (y < 0 || y >= self.canvas.height) return;
 
         /* for fun */
-        self.zput(x, y, z, x, y, z);
+        //self.zput(x, y, z, x, y, z);
 
         if (!self.left[y] || x <= self.left[y].x) {
-            self.left[y] = self.makePoint(x, y, z, r, g, b);
+            self.left[y] = self.makePoint(x-1, y, z, r, g, b);
         }
         if (!self.right[y] || x >= self.right[y].x) {
-            self.right[y] = self.makePoint(x, y, z, r, g, b);
+            self.right[y] = self.makePoint(x+1, y, z, r, g, b);
         }
     };
 
