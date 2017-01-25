@@ -109,9 +109,8 @@ const TriangularB6 = function(canvas) {
                     b = self.texture[ tIndex++ ];
             }
 
-			if ( self.dot ) {
-				var q = 0.1 + self.dot * 0.9;
-				//q = self.dot * self.dot;
+			if ( self.normal ) {
+				var q = 0.1 + self.normal.z * 0.9;
 				r = Math.floor( r * q );
 				g = Math.floor( g * q );
 				b = Math.floor( b * q );
@@ -151,9 +150,9 @@ const TriangularB6 = function(canvas) {
         }
     };
 
-    self.triangleDraw = function(pt1, pt2, pt3,dot) {
+    self.triangleDraw = function(pt1, pt2, pt3, normal ) {
         self.clearScanlines();
-		self.dot = dot;
+		self.normal = normal;
 
         var minY = Math.min(pt1.y, Math.min(pt2.y, pt3.y));
         var maxY = Math.max(pt1.y, Math.max(pt2.y, pt3.y)) + 1;

@@ -18,6 +18,14 @@ const Point = function(x,y,z) {
 		return self.initXYZ( value[ 0 ][ 0 ], value[ 1 ][ 0 ], value[ 2 ][ 0 ] );
 	};
 
+	self.toXYZ = function() {
+		return {
+			  x : self.value[ 0 ][ 0 ]
+			, y : self.value[ 1 ][ 0 ]
+			, z : self.value[ 2 ][ 0 ]
+		};
+	}
+
 	self.copy = function() {
 		return ( new Point() ).initPoint( self );
 	};
@@ -76,13 +84,7 @@ const Point = function(x,y,z) {
 	};
 
 	self.toString = function() {
-		return JSON.stringify(
-			{
-				  x : self.value[ 0 ][ 0 ]
-				, y : self.value[ 1 ][ 0 ]
-				, z : self.value[ 2 ][ 0 ]
-			}
-		);
+		return JSON.stringify( self.toXYZ() );
 	};
 
 	///
