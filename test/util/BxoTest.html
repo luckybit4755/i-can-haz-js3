@@ -24,13 +24,19 @@
 		</style>
 
         <script src="../../src/util/Matrix.js"></script>
+        <script src="../../src/util/Point.js"></script>
         <script src="../../src/weak/TriangularB6.js"></script>
         <script>
+
+			const EPSILON = 0.00000000001; // blecho!
+
 			window.onload = function() {
 				const matrix = new Matrix().common();
 
 				const canvas = document.getElementsByTagName( 'canvas' )[ 0 ];
 				const tb6 = new TriangularB6( canvas );
+				tb6.outline = true;
+				tb6.fillStyle = '#F99';
 
 				const w = parseInt( canvas.width );
 				const h = parseInt( canvas.height );
@@ -103,7 +109,7 @@
 					var py = Math.floor( w2 + y * w3 );
 
 					return {
-						 x:px
+						  x:px
 						, y:py
 						, z:z
 						, r: tb6.texture ?  s : toColor( ox )
@@ -111,8 +117,10 @@
 						, b: tb6.texture ? -1 : toColor( oz )
 					};
 				};
-
-				const triangle = function( rotations, p1, p2, p3 ) {
+var ww = 0;
+var hh = 0;
+var zcounts = {};
+				const triangle = function( rotations, p1, p2, p3, derp ) {
 					//console.log( 'p1:' + JSON.stringify( p1 ) );
 
 					var t1 = matrix.multiply( rotations, p1 );
@@ -124,12 +132,67 @@
 					var pt1 = makePoint( t1, p1 );
 					var pt2 = makePoint( t2, p2 );
 					var pt3 = makePoint( t3, p3 );
-					
-					//console.log( 'pt1:' + JSON.stringify( pt1 ) );
-					//console.log( 'pt2:' + JSON.stringify( pt2 ) );
-					//console.log( 'pt3:' + JSON.stringify( pt3 ) );
 
-					tb6.triangleDraw( pt1, pt2, pt3 );
+					// FIXME: cross and dot are jacked up somehow...
+derp = false;
+					var n1 = new Point().initValue( t1 );
+					var n2 = new Point().initValue( t2 );
+					var n3 = new Point().initValue( t3 );
+
+					var normal;
+
+					if ( !true ) {
+						normal = new Point().cross( n1.minus( n2 ), n3.minus( n2 ) ).normalize();
+					} else {
+						//http://www.opengl-tutorial.org/beginners-tutorials/tutorial-8-basic-shading/
+						n2.minus( n1 ); // edge1 = v2-v1
+						n3.minus( n1 ); // edge2 = v3-v1
+						normal = new Point().cross( n2, n3 ).normalize();
+						//triangle.normal = cross(edge1, edge2).normalize()
+					}
+
+					var light = new Point( 10, 10, 10 ).normalize();
+					var dot = normal.dot( light );
+dot = normal.z();
+
+var doto = Math.floor( dot * 10 ) / 10.0;
+if ( doto in zcounts ) {
+	zcounts[ doto ]++; 
+} else {
+	zcounts[ doto ] = 1;
+}
+
+//dot = doto; if (dot<0)dot=-dot;
+
+if ( 0 == hh++ % 10000 ) console.log( JSON.stringify( zcounts ) + ' and ' + doto + ' vs ' + tb6.dfq );
+
+//if ( dot < -EPSILON ) return;
+
+
+if ( dot < 0 ) {
+	//if ( ww++<33)console.log(dot);
+	//return;
+	dot = -dot;
+} else {
+	//if ( 0 != dot && hh++<33)console.log(dot);
+}
+
+/*
+						if ( dot < 0 && -EPSILON <= dot ) dot = 0;
+						if ( dot < 0 ) return;
+
+
+						if ( dot < -EPSILON ) return;
+						if ( dot < EPSILON ) dot = EPSILON;
+var qqq = EPSILON;
+qqq = 0.1;
+						if ( dot < -qqq ) return;
+						if ( dot < qqq ) dot = qqq;
+if ( ww++<33)console.log(dot);
+*/
+
+
+					tb6.triangleDraw( pt1, pt2, pt3, dot );
 				};
 
 				var time = 0;
@@ -177,15 +240,17 @@
 						}
 					}
 
+					var derp = !true;
 					sides.forEach(
 						function( side ) {
 							for ( var i = 0 ; i < side.length - 1 ; i++ ) {
 								var row1 = side[ i ];
-								var row2 = side[ i + 1];
+								var row2 = side[ i + 1 ];
 
 								for ( var j = 0 ; j < row1.length - 1 ; j++ ) {
 									triangle( rotations, row1[ j ], row1[ j + 1 ], row2[ j ] );
-									triangle( rotations, row1[ j + 1 ], row2[ j + 1 ], row2[ j ] );
+									triangle( rotations, row2[ j ], row1[ j + 1 ], row2[ j + 1 ], derp );
+
 									triangles += 2;
 								}
 							}
@@ -195,12 +260,17 @@
 					tb6.flush();
 
 					if ( true ) {
-						if ( !tb6.texture ) { 
-							var image = document.getElementsByTagName( 'img' )[ 0 ];
-							tb6.context.drawImage( image, 0, 0 );
+						if ( true||!tb6.texture ) { 
+							if ( false ) {
+								var image = document.getElementsByTagName( 'img' )[ 0 ];
+								tb6.context.drawImage( image, 0, 0 );
 
-							var imageData = tb6.context.getImageData( 0, 0, 256, 256 );
-							tb6.setTexture( imageData.data, 256, 256 );
+								var imageData = tb6.context.getImageData( 0, 0, 256, 256 );
+								tb6.setTexture( imageData.data, 256, 256 );
+							} else {
+								var imageData = tb6.context.getImageData( 0, 0, w, h );
+								tb6.setTexture( imageData.data, w, h );
+							}
 						}
 					}
 

@@ -91,13 +91,24 @@ const Matrix = function() {
 			]
 		);
 	};
-	
+
+/* junk?	
 	self.point2 = function( x, y, z ) {
 		return self.fixToString( [ [ x, y, z, 0 ] ] );
+	};
+*/
+	self.point = function( x, y, z ) {
+		return self.fixToString( [ [x], [y], [z], [0] ] );
 	};
 
 	self.point = function( x, y, z ) {
 		return self.fixToString( [ [x], [y], [z], [0] ] );
+	};
+
+	self.minusPoint = function( point1, point2 ) {
+	};
+
+	self.normalizePoint = function( point ) {
 	};
 
 	self.makeRotations = function( ax, ay, az ) {

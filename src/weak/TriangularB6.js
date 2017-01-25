@@ -25,6 +25,7 @@ const TriangularB6 = function(canvas) {
     var self = this;
     self.zFar = 3344;
     self.init = function(canvas) {
+		self.fillStyle = 'black';
         self.canvas = canvas || document.getElementsByTagName('canvas')[0];
         self.context = self.canvas.getContext('2d');
 
@@ -51,7 +52,7 @@ const TriangularB6 = function(canvas) {
     };
 
     self.clearPixels = function() {
-        self.context.fillStyle = 'black';
+        self.context.fillStyle = self.fillStyle;
         self.context.fillRect(0, 0, self.canvas.width, self.canvas.height);
         self.imageData = self.context.getImageData(0, 0, self.canvas.width, self.canvas.height);
     };
@@ -108,6 +109,14 @@ const TriangularB6 = function(canvas) {
                     b = self.texture[ tIndex++ ];
             }
 
+			if ( self.dot ) {
+				var q = 0.1 + self.dot * 0.9;
+				//q = self.dot * self.dot;
+				r = Math.floor( r * q );
+				g = Math.floor( g * q );
+				b = Math.floor( b * q );
+			}
+
             self.imageData.data[index++] = r;
             self.imageData.data[index++] = g;
             self.imageData.data[index++] = b;
@@ -130,7 +139,9 @@ const TriangularB6 = function(canvas) {
         if (y < 0 || y >= self.canvas.height) return;
 
         /* for fun */
-        //self.zput(x, y, z, x, y, z);
+		if ( self.outline ) {
+        	self.zput(x, y, z -0.0001, x, y, z);
+		}
 
         if (!self.left[y] || x <= self.left[y].x) {
             self.left[y] = self.makePoint(x-1, y, z, r, g, b);
@@ -140,8 +151,9 @@ const TriangularB6 = function(canvas) {
         }
     };
 
-    self.triangleDraw = function(pt1, pt2, pt3) {
+    self.triangleDraw = function(pt1, pt2, pt3,dot) {
         self.clearScanlines();
+		self.dot = dot;
 
         var minY = Math.min(pt1.y, Math.min(pt2.y, pt3.y));
         var maxY = Math.max(pt1.y, Math.max(pt2.y, pt3.y)) + 1;
