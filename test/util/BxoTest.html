@@ -30,13 +30,35 @@
 
 			const EPSILON = 0.00000000001; // blecho!
 
+			const checked = function( id, cb ) {
+				var target = document.getElementById( id );
+				if ( !target ) return;
+				console.log( target );
+				target.onclick = function( event ) { 
+					if ( /checkbox/i.test( target.type ) ) {
+						return cb( target.checked, event ); 
+					}
+					if ( /color/i.test( target.type ) ) {
+						return cb( target.value, event ); 
+					}
+					console.log( target.type );
+				}
+				target.onclick();
+			}
+
 			window.onload = function() {
 				const matrix = new Matrix().common();
 
 				const canvas = document.getElementsByTagName( 'canvas' )[ 0 ];
 				const tb6 = new TriangularB6( canvas );
-				tb6.outline = true;
-				tb6.fillStyle = '#F99';
+
+				var useTextures = true;
+				var useDynamicTextures = true;
+
+				checked( 'texture' ,   function( v ) { tb6.setTexture( null ); useTextures = v } );
+				checked( 'dynamic' ,   function( v ) { tb6.setTexture( null ); useDynamicTextures = v } );
+				checked( 'outlines',   function( v ) { tb6.outline = v } );
+				checked( 'background', function( v ) { tb6.fillStyle = v } );
 
 				const w = parseInt( canvas.width );
 				const h = parseInt( canvas.height );
@@ -259,18 +281,23 @@ if ( ww++<33)console.log(dot);
 
 					tb6.flush();
 
-					if ( true ) {
-						if ( true||!tb6.texture ) { 
-							if ( false ) {
+					if ( useTextures ) {
+						if ( useDynamicTextures || !tb6.texture ) { 
+							if ( useDynamicTextures ) {
+								var imageData = tb6.context.getImageData( 0, 0, w, h );
+								tb6.setTexture( imageData.data, w, h );
+							} else {
 								var image = document.getElementsByTagName( 'img' )[ 0 ];
 								tb6.context.drawImage( image, 0, 0 );
 
 								var imageData = tb6.context.getImageData( 0, 0, 256, 256 );
 								tb6.setTexture( imageData.data, 256, 256 );
-							} else {
-								var imageData = tb6.context.getImageData( 0, 0, w, h );
-								tb6.setTexture( imageData.data, w, h );
 							}
+						}
+					} else {
+						if ( tb6.texture ) {
+							tb6.setTexture( null, 0, 0 );
+							console.log( 'go away...' );
 						}
 					}
 
@@ -291,5 +318,11 @@ if ( ww++<33)console.log(dot);
 		<canvas width="512" height="512"></canvas>
 		<div>u&lt;3 it!</div>
 		<img src="images/water-texture.jpg"></img>
+		<div>
+			<input type="checkbox" checked="ww" id="texture"/>  texture
+			<input type="checkbox" checked="ww" id="dynamic"/>  dynamic texture
+			<input type="checkbox" checked="ww" id="outlines"/> outlines
+			<input type="color" id="background" value="#9090F0"/> background
+		</div>
 	</BODY>
 </HTML>
