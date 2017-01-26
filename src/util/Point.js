@@ -22,7 +22,6 @@ const Point = function(x,y,z) {
 		return self.initXYZ( value[ 0 ], value[ 1 ], value[ 2 ] );
 	};
 
-
 	self.toXYZ = function() {
 		return {
 			  x : self.value[ 0 ][ 0 ]
@@ -90,6 +89,17 @@ const Point = function(x,y,z) {
 
 	self.toString = function() {
 		return JSON.stringify( self.toXYZ() );
+	};
+
+	self.scale = function( scalar ) {
+		self.value[ 0 ][ 0 ] *= scalar;
+		self.value[ 1 ][ 0 ] *= scalar;
+		self.value[ 2 ][ 0 ] *= scalar;
+		return this;
+	};
+
+	self.tween = function( a, b, t ) {
+		return self.initPoint( a ).minus( b ).scale( t ).add( b );
 	};
 
 	///

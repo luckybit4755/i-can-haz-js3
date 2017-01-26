@@ -144,7 +144,6 @@
 
 							side.forEach(
 								function( vertex ) {
-									vertex.range = range;
 									for ( var i = 0 ; i < vertex.value.length ; i++ ) {
 										var v = vertex.value[ i ][ 0 ];
 										if ( EPSILON == range.min[ i ] || v < range.min[ i ] ) range.min[ i ] = v;
@@ -157,38 +156,70 @@
 								range.diff[ i ] = range.max[ i ] - range.min[ i ];
 							}
 
-
+							side.forEach(
+								function( vertex ) {
+									for ( var i = 0 ; i < range.diff.length ; i++ ) {
+										if ( !range.diff[ i ] ) continue;
+										var v = vertex.value[ i ][ 0 ];
+										v = ( v - range.min[ i ] ) / range.diff[ i ];
+										if ( 's' in vertex ) {
+											vertex.t = v * 255;
+										} else {
+											vertex.s = v * 255;
+										}
+									}
+								}
+							);
 						}
 					);
 					return sides;
 				};
-				var sides = makeSides();
+				
+				const midpoint = function( p1, p2 ) {
+					var middle = new Point().tween( p1, p2, 0.5 );
+					middle.s = p1.s + ( p2.s - p1.s ) * 0.5;
+					middle.t = p1.t + ( p2.t - p1.t ) * 0.5;
+					return middle;
+				};
+
+				const splitSide = function( side, sides ) {
+					var middle1 = midpoint( side[ 0 ], side[ 1 ] );
+					var middle2 = midpoint( side[ 1 ], side[ 2 ] );
+					var middle3 = midpoint( side[ 2 ], side[ 3 ] );
+					var middle0 = midpoint( side[ 3 ], side[ 0 ] );
+					var middleX = midpoint( middle0, middle2 );
+
+					// these are backwards (clockwise) like the geom files
+					sides.push( [ middle0, side[ 0 ], middle1, middleX ] );
+					sides.push( [ middleX, middle1, side[ 1 ], middle2 ] );
+					sides.push( [ side[ 3 ], middle0, middleX, middle3 ] );
+					sides.push( [ middle3, middleX, middle2, side[ 2 ] ] );
+				};
+
+				const splitSides = function( sides, splits ) {
+					for ( var i = 0 ; i < splits ; i++ ) {
+						var tmp = [];
+						sides.forEach(
+							function( side ) {
+								splitSide( side, tmp );
+							}
+						);
+						sides = tmp;
+					}
+					return sides;
+				};
+
+				var sides = splitSides( makeSides(), 3 );
 
 				const toColor = function( v ) {
 					return Math.floor( ( v + 1 ) / 2.0 * 255 ) % 255;
 				};
 
-				const makePoint = function( pt, og, range ) {
+				const makePoint = function( pt, original ) {
 					var x = pt[ 0 ][ 0 ];
 					var y = pt[ 1 ][ 0 ];
 					var z = pt[ 2 ][ 0 ];
 					
-					var ox = og[ 0 ][ 0 ];
-					var oy = og[ 1 ][ 0 ];
-					var oz = og[ 2 ][ 0 ];
-
-					var s = EPSILON;
-					var t = EPSILON;
-					for ( var i = 0 ; i < range.diff.length ; i++ ) {
-						if ( !range.diff[ i ] ) continue;
-						var v = ( og[ i ][ 0 ] - range.min[ i ] ) / range.diff[ i ];
-						if ( EPSILON == s ) {
-							s = v * 255;
-						} else {
-							t = v * 255;
-						}
-					}
-
 					var tmp = spherish;
 					if ( tmp > 1 ) tmp = 1;
 					if ( tmp < 0 ) tmp = 0;
@@ -206,14 +237,13 @@
 						  x:px
 						, y:py
 						, z:z
-						, r: s
-						, g: t
-						, b: tb6.texture ? -1 : 255 - s
-						, s:s
-						, t:t
+						, r:original.s
+						, g:original.t
+						, b:tb6.texture ? -1 : 255 - original.s
 					};
 				};
 
+var ww = {}; var hh = 0;
 				const triangle = function( rotations, p1, p2, p3 ) {
 					//console.log( 'p1:' + JSON.stringify( p1 ) );
 
@@ -223,13 +253,13 @@
 
 					//console.log( 't1:' + JSON.stringify( t1 ) );
 
-					var pt1 = makePoint( t1, p1.value, p1.range );
-					var pt2 = makePoint( t2, p2.value, p2.range );
-					var pt3 = makePoint( t3, p3.value, p3.range );
+					var pt1 = makePoint( t1, p1 );
+					var pt2 = makePoint( t2, p2 );
+					var pt3 = makePoint( t3, p3 );
 
-					var n1 = new Point().initValue( t1 );
-					var n2 = new Point().initValue( t2 );
-					var n3 = new Point().initValue( t3 );
+					var n1 = new Point().initXYZ( pt1.x, pt1.y, pt1.z );
+					var n2 = new Point().initXYZ( pt2.x, pt2.y, pt2.z );
+					var n3 = new Point().initXYZ( pt3.x, pt3.y, pt3.z );
 
 					var normal = false;
 					if ( useShading ) {
@@ -239,6 +269,9 @@
 						if ( normal.z < 0 ) {
 							return;
 						}
+var q = Math.floor( normal.z * 10 ) / 10.0;
+if ( q in ww ) ww[q]++;else ww[q]=1;
+if ( 0 == hh++ % 10000 ) console.log( JSON.stringify( ww ) );
 					} 
 
 					tb6.triangleDraw( pt1, pt2, pt3, normal );
@@ -350,8 +383,8 @@
 		<canvas width="512" height="512"></canvas>
 		<div>
 			<input type="checkbox" checked="ww" id="texture"/>  texture
-			<input type="checkbox" checked="ww" id="dynamic"/>  dynamic texture
-			<input type="checkbox" checked="ww" id="outlines"/> outlines
+			<input type="checkbox" ichecked="ww" id="dynamic"/>  dynamic texture
+			<input type="checkbox" ichecked="ww" id="outlines"/> outlines
 			<input type="checkbox" checked="ww" id="shading"/>  shading
 			<input type="color" id="background" value="#9090F0"/> background
 			<button id="timer">reset timer</button>
