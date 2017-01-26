@@ -114,10 +114,13 @@
 					interaction( 'shading',    function( v ) { useShading = v } );
 					interaction( 'background', function( v ) { tb6.fillStyle = v } );
 					interaction( 'timer',      function( v ) { time = 0; triangles = 0; begin = now(); } );
+					interaction( 'alphonzo',   function( v ) { tb6.fillStyle = 'rgba(190,190,255,0.07)' }, true );
 
-					control.push( interaction( 'a0', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 0 ] = v * Math.PI * 2 }, true ) );
-					control.push( interaction( 'a1', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 1 ] = v * Math.PI * 2 }, true ) );
-					control.push( interaction( 'a2', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 2 ] = v * Math.PI * 2 }, true ) );
+					var p2 = Math.PI * 2;
+
+					control.push( interaction( 'a0', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 0 ] = v * p2 }, true ) );
+					control.push( interaction( 'a1', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 1 ] = v * p2 }, true ) );
+					control.push( interaction( 'a2', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 2 ] = v * p2 }, true ) );
 
 					canvas.onclick = function() { paused = !paused };
 				};
@@ -385,6 +388,7 @@
 			<input type="checkbox" checked="ww" id="shading"/>  shading
 			<input type="color" id="background" value="#9090F0"/> background
 			<button id="timer">reset timer</button>
+			<button id="alphonzo">alphonzo</button>
 		</div>
 		<div>
 			<input id="a0" type="range" min="0" max="1000" step="1"/>
