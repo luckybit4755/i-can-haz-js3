@@ -240,10 +240,12 @@
 						, r:original.s
 						, g:original.t
 						, b:tb6.texture ? -1 : 255 - original.s
+						, rx:x
+						, ry:y
+						, rz:z
 					};
 				};
 
-var ww = {}; var hh = 0;
 				const triangle = function( rotations, p1, p2, p3 ) {
 					//console.log( 'p1:' + JSON.stringify( p1 ) );
 
@@ -251,15 +253,13 @@ var ww = {}; var hh = 0;
 					var t2 = matrix.multiply( rotations, p2.value );
 					var t3 = matrix.multiply( rotations, p3.value );
 
-					//console.log( 't1:' + JSON.stringify( t1 ) );
-
 					var pt1 = makePoint( t1, p1 );
 					var pt2 = makePoint( t2, p2 );
 					var pt3 = makePoint( t3, p3 );
 
-					var n1 = new Point().initXYZ( pt1.x, pt1.y, pt1.z );
-					var n2 = new Point().initXYZ( pt2.x, pt2.y, pt2.z );
-					var n3 = new Point().initXYZ( pt3.x, pt3.y, pt3.z );
+					var n1 = new Point().initXYZ( pt1.rx, pt1.ry, pt1.rz );
+					var n2 = new Point().initXYZ( pt2.rx, pt2.ry, pt2.rz );
+					var n3 = new Point().initXYZ( pt3.rx, pt3.ry, pt3.rz );
 
 					var normal = false;
 					if ( useShading ) {
@@ -269,9 +269,6 @@ var ww = {}; var hh = 0;
 						if ( normal.z < 0 ) {
 							return;
 						}
-var q = Math.floor( normal.z * 10 ) / 10.0;
-if ( q in ww ) ww[q]++;else ww[q]=1;
-if ( 0 == hh++ % 10000 ) console.log( JSON.stringify( ww ) );
 					} 
 
 					tb6.triangleDraw( pt1, pt2, pt3, normal );
