@@ -18,6 +18,11 @@ const Point = function(x,y,z) {
 		return self.initXYZ( value[ 0 ][ 0 ], value[ 1 ][ 0 ], value[ 2 ][ 0 ] );
 	};
 
+	self.initArray = function( value ) {
+		return self.initXYZ( value[ 0 ], value[ 1 ], value[ 2 ] );
+	};
+
+
 	self.toXYZ = function() {
 		return {
 			  x : self.value[ 0 ][ 0 ]

@@ -119,7 +119,7 @@ const TriangularB6 = function(canvas) {
             self.imageData.data[index++] = r;
             self.imageData.data[index++] = g;
             self.imageData.data[index++] = b;
-            self.imageData.data[index++] = zCue;
+            self.imageData.data[index++] = 255;//zCue;
         }
     };
 
