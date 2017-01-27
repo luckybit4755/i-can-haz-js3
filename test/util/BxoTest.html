@@ -8,21 +8,23 @@
                 background:black;
             }
 			div {
-				padding-left: 3em;
 				color:#FF9;
+                margin: auto;
+                display: block;
+				width:512px;
 			}
             canvas {
                 width:512px;
                 height:512px;
                 margin: auto;
                 display: block;
-                padding-top:66px;
+                padding-top:1em;
             }
 			img {
 				display:none;
 			}
 			input[type="range"] { 
-				width:600px;
+				width:512px;
 				display:block;
 			}
 		</style>
@@ -31,7 +33,6 @@
         <script src="../../src/util/Point.js"></script>
         <script src="../../src/weak/TriangularB6.js"></script>
         <script>
-
 			const EPSILON = 0.00000000001; // blecho!
 
 			// https://raw.githubusercontent.com/luckybit4755/geom/master/cube.geom 
@@ -40,13 +41,20 @@
 			const interaction = function( id, cb, smokeless ) {
 				var target = document.getElementById( id );
 				if ( !target ) return;
-				console.log( target );
+
 				target.onclick = target.onchange = target.oninput = function( event ) { 
 					if ( /checkbox/i.test( target.type ) ) {
 						return cb( target.checked, event ); 
 					}
 					if ( /color/i.test( target.type ) ) {
 						return cb( target.value, event ); 
+					}
+					if ( /select/i.test( target.type ) ) {
+						return cb( 
+								target.options[ target.selectedIndex ].value
+								, event
+								, target 
+						);
 					}
 					if ( /range/i.test( target.type ) ) {
 						var v = parseInt( target.value );
@@ -56,13 +64,10 @@
 						v = ( v - min ) / diff;
 						return cb( v, event, target );
 					}
-					console.log( target.type );
 					return cb( target, event );
 				}
 
-				if ( smokeless ) {
-					console.log( 'do not smoke test: ' + target );
-				} else {
+				if ( !smokeless ) {
 					target.onclick();
 				}
 
@@ -107,9 +112,12 @@
 
 				var paused = false;
 
+				var textures = {};
+				var currentTexture = false;
+
 				const handlers = function() {
-					interaction( 'texture' ,   function( v ) { tb6.setTexture( null ); useTextures = v } );
-					interaction( 'dynamic' ,   function( v ) { tb6.setTexture( null ); useDynamicTextures = v } );
+					var c_texture = interaction( 'texture' ,   function( v ) { useTextures = v } );
+					var c_dynamic = interaction( 'dynamic' ,   function( v ) { useDynamicTextures = v } );
 					interaction( 'outlines',   function( v ) { tb6.outline = v } );
 					interaction( 'shading',    function( v ) { useShading = v } );
 					interaction( 'background', function( v ) { tb6.fillStyle = v } );
@@ -123,6 +131,33 @@
 					control.push( interaction( 'a2', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 2 ] = v * p2 }, true ) );
 
 					canvas.onclick = function() { paused = !paused };
+
+					var images = document.getElementsByTagName( 'img' );
+					var texture = document.getElementById( 'images' );
+					for ( var i = 0 ; i < images.length ; i++ ) {
+						var image = images[ i ];
+						var name = image.getAttribute( 'src' ).replace( /.*\//, '' ).replace( /\.[a-z]+$/, '' );
+
+						tb6.context.drawImage( image, 0, 0 );
+						var imageData = tb6.context.getImageData( 0, 0, 256, 256 );
+
+						textures[ name ] = imageData.data;
+						var option = document.createElement( 'option' );
+						option.value = option.innerHTML = name; 
+						texture.appendChild( option );
+					};
+
+					interaction( 
+						'images'
+						, function( v ) { 
+							useTextures = true;
+							useDynamicTextures = false;
+
+							currentTexture = textures[ v ]
+							c_texture.checked = true;
+							c_dynamic.checked = false;
+						}
+					);
 				};
 				handlers();
 
@@ -321,6 +356,15 @@
 								spherish_increment *= -1;
 							}
 						}
+						if ( useTextures ) {
+							if ( !useDynamicTextures  ) { 
+								tb6.setTexture( currentTexture, 256, 256 );
+							}
+						} else {
+							if ( tb6.texture ) {
+								tb6.setTexture( null, 0, 0 );
+							}
+						}
 					}
 
 					if ( 0 == ++iteration % 44 ) which = ( which + 1 ) % 3;
@@ -332,7 +376,7 @@
 						var overall = comma( Math.floor( ( start - begin ) * 10 ) / 10.0 );
 						info.innerHTML = ( ''
 							+ tps + ' triangles per second<br/>' 
-							+ trz + ' triangles in ' + secz + ' seconds drawing<br/>' 
+							+ trz + ' triangles in ' + secz + ' seconds drawing ; ' 
 							+ overall + ' seconds total'
 						);
 						console.log( info.innerHTML );
@@ -348,27 +392,12 @@
 
 					tb6.flush();
 
-					if ( useTextures ) {
-						if ( useDynamicTextures || !tb6.texture ) { 
-							if ( useDynamicTextures ) {
-								var imageData = tb6.context.getImageData( 0, 0, w, h );
-								tb6.setTexture( imageData.data, w, h );
-							} else {
-								var image = document.getElementsByTagName( 'img' )[ 0 ];
-								tb6.context.drawImage( image, 0, 0 );
-
-								var imageData = tb6.context.getImageData( 0, 0, 256, 256 );
-								tb6.setTexture( imageData.data, 256, 256 );
-					
-								tb6.flush();
-							}
+					if ( useDynamicTextures  ) { 
+						if ( useDynamicTextures ) {
+							var imageData = tb6.context.getImageData( 0, 0, w, h );
+							tb6.setTexture( imageData.data, w, h );
 						}
-					} else {
-						if ( tb6.texture ) {
-							tb6.setTexture( null, 0, 0 );
-							console.log( 'go away...' );
-						}
-					}
+					} 
 
 					var end = new Date().getTime() / 1000.0;
 					time += ( end - start );
@@ -386,9 +415,12 @@
 			<input type="checkbox" ichecked="ww" id="dynamic"/>  dynamic texture
 			<input type="checkbox" ichecked="ww" id="outlines"/> outlines
 			<input type="checkbox" checked="ww" id="shading"/>  shading
+		</div>
+		<div>
 			<input type="color" id="background" value="#9090F0"/> background
 			<button id="timer">reset timer</button>
 			<button id="alphonzo">alphonzo</button>
+			<select id="images"></select>
 		</div>
 		<div>
 			<input id="a0" type="range" min="0" max="1000" step="1"/>
@@ -396,6 +428,12 @@
 			<input id="a2" type="range" min="0" max="1000" step="1"/>
 		</div>
 		<div id="info">u&lt;3 it!</div>
+
+		<img src="images/stone-wall.jpg"></img>
 		<img src="images/water-texture.jpg"></img>
+		<img src="images/grass-texture.jpg"></img>
+		<img src="images/lava-texture.jpg"></img>
+		<img src="images/stars.png"></img>
+		<img src="images/bedrock1.jpg"></img>
 	</BODY>
 </HTML>
