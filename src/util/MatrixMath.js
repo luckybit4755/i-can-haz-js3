@@ -1,10 +1,10 @@
 const MatrixMath = {
-	multiplication:{}
+	multiplicationTable:[]
 
-	, common: function() {
-	    MatrixMath.getMultiplicationMethodSize( 4,4, 4,4 );
-	    MatrixMath.getMultiplicationMethodSize( 1,4, 4,4 );
-	    MatrixMath.getMultiplicationMethodSize( 4,4, 4,1 );
+	, init: function() {
+		MatrixMath.mm_4_4_4_4 = MatrixMath.getMultiplicationMethodBySize( 4,4, 4,4 );
+		MatrixMath.mm_1_4_4_4 = MatrixMath.getMultiplicationMethodBySize( 1,4, 4,4 );
+		MatrixMath.mm_4_4_4_1 = MatrixMath.getMultiplicationMethodBySize( 4,4, 4,1 );
 		return MatrixMath;
 	}
 
@@ -96,9 +96,13 @@ const MatrixMath = {
 	, normalizePoint: function( point ) {
 	}
 
+		//MatrixMath.mm_4_4_4_4 = MatrixMath.getMultiplicationMethodBySize( 4,4, 4,4 );
+		//MatrixMath.mm_1_4_4_4 = MatrixMath.getMultiplicationMethodBySize( 1,4, 4,4 );
+		//MatrixMath.mm_4_4_4_1 = MatrixMath.getMultiplicationMethodBySize( 4,4, 4,1 );
+
 	, makeRotations: function( ax, ay, az ) {
-		return MatrixMath.multiply( 
-			MatrixMath.multiply( 
+		return MatrixMath.mm_4_4_4_4( 
+			MatrixMath.mm_4_4_4_4( 
 				  MatrixMath.rotateX( ax )
 				, MatrixMath.rotateY( ay ) 
 			)
@@ -107,13 +111,13 @@ const MatrixMath = {
 	}
 
 	, rotatePoint: function( x, y, z, ax, ay, az ) {
-		return MatrixMath.multiply( MatrixMath.makeRotations( ax, ay, az ), MatrixMath.point( x, y, z ) );
+		return MatrixMath.mm_4_4_4_4( MatrixMath.makeRotations( ax, ay, az ), MatrixMath.point( x, y, z ) );
 	}
 
 	////
 
 	, typedMultiply: function( type, m1, m2 ) {
-		return MatrixMath.multiplication[ type ]( m1, m2 );
+		return MatrixMath.multiplicationTable[ type ]( m1, m2 );
 	}
 
 	, multiply: function( m1, m2 ) {
@@ -123,24 +127,56 @@ const MatrixMath = {
 	}
 
 	, getMultiplicationMethod: function( m1, m2 ) {
-		MatrixMath.size( m1 );
-		MatrixMath.size( m2 );
-		return MatrixMath.getMultiplicationMethodSize( m1.size.rows, m1.size.columns, m2.size.rows, m2.size.columns );
+		return MatrixMath.getMultiplicationMethodBySize( 
+			  m1.length, m1[ 0 ].length
+			, m2.length, m2[ 0 ].length
+		);
 	}
 
-	, getMultiplicationMethodSize: function( m1_rows, m1_columns, m2_rows, m2_columns ) {
-		var type = (
-			m1_rows + 'x' + m1_columns 
-			+ ' * ' +
-			m2_rows + 'x' + m2_columns
-		);
+	, getMultiplicationMethodBySize: function( m1_rows, m1_columns, m2_rows, m2_columns ) {
+		var here = MatrixMath.multiplicationTable;
+		var found = true;
+		var size;
 
-		if ( type in MatrixMath.multiplication ) return MatrixMath.multiplication[ type ];
+		size = m1_rows; 
+		if ( size > here.length ) { 
+			found = false; 
+			while( here.length < size ) here.push( [] );
+		}
+		here = here[ size - 1 ];
+		
+		size = m1_columns; 
+		if ( size > here.length ) { 
+			found = false; 
+			while( here.length < size ) here.push( [] );
+		} 
+		here = here[ size - 1 ];
+
+		size = m2_rows; 
+		if ( size > here.length ) { 
+			found = false; 
+			while( here.length < size ) here.push( [] );
+		} 
+		here = here[ size - 1 ];
+
+		size = m2_columns; 
+		if ( size > here.length ) { 
+			found = false; 
+			while( here.length < size ) here.push( false );
+		} 
+		here = here[ size - 1 ];
+
+		if ( found && here ) {
+			return here;
+		} 
 
 		var body = MatrixMath.writeMultiplicationSized( m1_rows, m1_columns, m2_rows, m2_columns )
-		console.log( type + ' -> ' + body );
+		console.log( [m1_rows, m1_columns, m2_rows, m2_columns] + ' -> ' + body );
 
-		return MatrixMath.multiplication[ type ] = new Function( 'm1', 'm2', body );
+		var funk = new Function( 'm1', 'm2', body );
+		MatrixMath.multiplicationTable[m1_rows-1][m1_columns-1][m2_rows-1][m2_columns-1] = funk;
+
+		return funk;
 	}
 
 	, size: function( m ) {
