@@ -29,7 +29,7 @@
 			}
 		</style>
 
-        <script src="../../src/util/Matrix.js"></script>
+        <script src="../../src/util/MatrixMath.js"></script>
         <script src="../../src/util/Point.js"></script>
         <script src="../../src/weak//Bresenham6d.js"></script>
         <script src="../../src/weak/TriangularB6.js"></script>
@@ -243,7 +243,8 @@
 				const info = document.getElementById( 'info' );
 
 				const tb6 = new TriangularB6( canvas );
-				const matrix = new Matrix().common();
+				//const matrix = new Matrix().common();
+				MatrixMath.common();
 				
 				var renderingTime = 0;
 				var triangles = 0;
@@ -334,7 +335,7 @@
 				};
 				handlers();
 
-				var sides = splitSides( makeSides(), 3 );
+				var sides = splitSides( makeSides(), 4 );
 
 var edge1 = new Point();
 var edge2 = new Point();
@@ -344,9 +345,9 @@ var normal = new Point();
 var norman_the_normal = { x:0, y:0, z:0 };
 
 				const drawTriangle = function( rotations, p1, p2, p3 ) {
-					var t1 = matrix.multiply( rotations, p1.value );
-					var t2 = matrix.multiply( rotations, p2.value );
-					var t3 = matrix.multiply( rotations, p3.value );
+					var t1 = MatrixMath.multiply( rotations, p1.value );
+					var t2 = MatrixMath.multiply( rotations, p2.value );
+					var t3 = MatrixMath.multiply( rotations, p3.value );
 
 					var pt1 = makePoint( t1, p1, spherish, w2, w3 );
 					var pt2 = makePoint( t2, p2, spherish, w2, w3 );
@@ -394,7 +395,7 @@ var norman_the_normal = { x:0, y:0, z:0 };
 
 					tb6.clear();
 
-					var rotations = matrix.makeRotations( angles[ 0 ], angles[ 1 ], angles[ 2 ] );
+					var rotations = MatrixMath.makeRotations( angles[ 0 ], angles[ 1 ], angles[ 2 ] );
 
 					if ( paused ) {
 						tb6.context.fillStyle = 'black';
