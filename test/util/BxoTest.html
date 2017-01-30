@@ -138,8 +138,8 @@
 			const toColor = function( v ) {
 				return Math.floor( ( v + 1 ) / 2.0 * 255 ) % 255;
 			};
-
-			const makePoint = function( pt, original, sphereWeight, w2, w3 ) {
+var fuck = true;
+			const makePoint = function( target, pt, original, sphereWeight, screenMiddle, screenSize ) {
 				var x = pt[ 0 ][ 0 ];
 				var y = pt[ 1 ][ 0 ];
 				var z = pt[ 2 ][ 0 ];
@@ -165,21 +165,19 @@
 				z *= magnitude;
 				*/
 
+				var screenX = Math.floor( screenMiddle + x * screenSize );
+				var screenY = Math.floor( screenMiddle + y * screenSize );
 
-				var screenX = Math.floor( w2 + x * w3 );
-				var screenY = Math.floor( w2 + y * w3 );
-
-				return {
-					  x:screenX
-					, y:screenY
-					, z:z
-					, r:original.s
-					, g:original.t
-					, b:255 - original.s
-					, actualX:x
-					, actualY:y
-					, actualZ:z
-				};
+				target.x = screenX;
+				target.y = screenY;
+				target.z = z;
+				target.r = Math.floor( original.s );
+				target.g = Math.floor( original.t );
+				target.b = 255 - target.r;
+				target.actualX = x;
+				target.actualY = y;
+				target.actualZ = z;
+				return target;
 			};
 
 			// this highlights the problem... right now there are 4
@@ -243,8 +241,8 @@
 				const info = document.getElementById( 'info' );
 
 				const tb6 = new TriangularB6( canvas );
-				//const matrix = new Matrix().common();
-				MatrixMath.common();
+				//const matrix = new Matrix().init();
+				MatrixMath.init();
 				
 				var renderingTime = 0;
 				var triangles = 0;
@@ -264,13 +262,14 @@
 				const w = parseInt( canvas.width );
 				const h = parseInt( canvas.height );
 
-				const w2 = w * 0.5;
-				const w3 = w * 0.28;
+				const screenMiddle = w * 0.5;
+				const screenSize = w * 0.28;
 
 				var useTextures = true;
 				var useDynamicTextures = true;
 				var useShading = true;
 
+				var creep = false;
 				var paused = false;
 
 				var textures = {};
@@ -296,9 +295,11 @@
 
 					interaction( 'outlines',   function( v ) { tb6.outline = v } );
 					interaction( 'shading',    function( v ) { useShading = v } );
+					interaction( 'creep',      function( v ) { creep = v } );
 					interaction( 'background', function( v ) { tb6.fillStyle = v } );
-					interaction( 'timer',      function( v ) { renderingTime = 0; triangles = 0; begin = now(); } );
-					interaction( 'alphonzo',   function( v ) { tb6.fillStyle = 'rgba(190,190,255,0.07)' }, true );
+					interaction( 'timer',      function( v ) { iteration = renderingTime = triangles = 0; begin = now(); } );
+				   	interaction( 'alphonzo',   function( v ) { tb6.fillStyle = 'rgba(255,128,92,0.07)' }, true );
+					interaction( 'method',    function( v ) { tb6.shadingMethod = parseInt( v ) } );
 
 					rangeHandler( 'a0', 0 );
 					rangeHandler( 'a1', 1 );
@@ -335,34 +336,40 @@
 				};
 				handlers();
 
-				var sides = splitSides( makeSides(), 4 );
+				var sides = splitSides( makeSides(), 5 );
 
-var edge1 = new Point();
-var edge2 = new Point();
-var edge3 = new Point();
-var light = new Point()
-var normal = new Point();
-var norman_the_normal = { x:0, y:0, z:0 };
+				// hacky workspace to avoid expensive object creation
+				var edge1 = new Point();
+				var edge2 = new Point();
+				var edge3 = new Point();
+				var light = new Point()
+				var normal = new Point();
+				var norman_the_normal = { x:0, y:0, z:0 };
+				var roundedPoint1 = { x:0, y:0, z:0, r:0, g:0, b:0, actualX:0, actualY:0, actualZ:0 };
+				var roundedPoint2 = { x:0, y:0, z:0, r:0, g:0, b:0, actualX:0, actualY:0, actualZ:0 };
+				var roundedPoint3 = { x:0, y:0, z:0, r:0, g:0, b:0, actualX:0, actualY:0, actualZ:0 };
 
 				const drawTriangle = function( rotations, p1, p2, p3 ) {
-					var t1 = MatrixMath.multiply( rotations, p1.value );
-					var t2 = MatrixMath.multiply( rotations, p2.value );
-					var t3 = MatrixMath.multiply( rotations, p3.value );
+					var t1 = MatrixMath.mm_4_4_4_1( rotations, p1.value );
+					var t2 = MatrixMath.mm_4_4_4_1( rotations, p2.value );
+					var t3 = MatrixMath.mm_4_4_4_1( rotations, p3.value );
 
-					var pt1 = makePoint( t1, p1, spherish, w2, w3 );
-					var pt2 = makePoint( t2, p2, spherish, w2, w3 );
-					var pt3 = makePoint( t3, p3, spherish, w2, w3 );
+					makePoint( roundedPoint1, t1, p1, spherish, screenMiddle, screenSize );
+					makePoint( roundedPoint2, t2, p2, spherish, screenMiddle, screenSize );
+					makePoint( roundedPoint3, t3, p3, spherish, screenMiddle, screenSize );
 
 					if ( useTextures && tb6.texture ) {
 						// this is the hack to tell TriangularB6 to use the texture
-						pt1.b = pt2.b = pt3.b = -1;
+						roundedPoint1.b = roundedPoint2.b = roundedPoint3.b = -1;
 					}
 
-					fillPoint( edge1, pt1 );
-					fillPoint( edge2, pt2 );
-					fillPoint( edge3, pt3 );
-
 					if ( useShading ) {
+				//return point.initXYZ( pt.actualX, pt.actualY, pt.actualZ );
+						
+						fillPoint( edge1, roundedPoint1 );
+						fillPoint( edge2, roundedPoint2 );
+						fillPoint( edge3, roundedPoint3 );
+
 						normal.cross( edge1.minus( edge2 ), edge3.minus( edge2 ) ).normalize();
 
 						if ( normal.z() < 0 ) {
@@ -381,7 +388,23 @@ var norman_the_normal = { x:0, y:0, z:0 };
 						norman_the_normal.z = normal.z();
 					} 
 
-					tb6.triangleDraw( pt1, pt2, pt3, useShading ? norman_the_normal : false );
+					// moar fun!
+					if ( creep ) {
+						var textureCreep = iteration * 3;
+						roundedPoint1.r += textureCreep;
+						roundedPoint1.g += textureCreep;
+						roundedPoint2.r += textureCreep;
+						roundedPoint2.g += textureCreep;
+						roundedPoint3.r += textureCreep;
+						roundedPoint3.g += textureCreep;
+					}
+
+					tb6.triangleDraw( 
+						  roundedPoint1
+						, roundedPoint2
+						, roundedPoint3
+						, useShading ? norman_the_normal : false 
+					);
 					return true;
 				};
 
@@ -486,12 +509,21 @@ var norman_the_normal = { x:0, y:0, z:0 };
 			<input type="checkbox" ichecked="ww" id="dynamic"/>  dynamic texture
 			<input type="checkbox" ichecked="ww" id="outlines"/> outlines
 			<input type="checkbox" checked="ww" id="shading"/>  shading
+			<input type="checkbox" ichecked="ww" id="creep"/>  creep
 		</div>
 		<div>
-			<input type="color" id="background" value="#9090F0"/> background
+			background: <input type="color" id="background" value="#9090F0"/> 
+			texture:    <select id="images"></select>
+			shading method:
+			<select id="method">
+				<option value="0">0</option>
+				<option value="1">1</option>
+				<option value="2">2</option>
+			</select>
+		</div>
+		<div>
 			<button id="timer">reset timer</button>
 			<button id="alphonzo">alphonzo</button>
-			<select id="images"></select>
 		</div>
 		<div>
 			<input id="a0" type="range" min="0" max="1000" step="1"/>

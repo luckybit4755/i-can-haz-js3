@@ -43,6 +43,10 @@ const TriangularB6 = function(canvas) {
 				zbufferRow[ x ] = self.zFar;
             }
         }
+
+		self.shadingMethod = 0;
+		self.shadingShiftValue = 7;
+		self.shadingSubtractValue = 131;
     };
 
     self.clear = function() {
@@ -86,7 +90,7 @@ const TriangularB6 = function(canvas) {
     };
 
     self.triangleDraw = function(pt1, pt2, pt3, normal ) {
-        self.clearScanlines();
+        //self.clearScanlines();
 		self.normal = normal;
 
         var minY = Math.min(pt1.y, Math.min(pt2.y, pt3.y));
@@ -125,6 +129,9 @@ const TriangularB6 = function(canvas) {
                 self.zput
             )
         };
+
+		self.left.fill(  false, minY, maxY );
+		self.right.fill( false, minY, maxY );
     };
 
     self.scanner = function(x, y, z, r, g, b) {
@@ -145,33 +152,47 @@ const TriangularB6 = function(canvas) {
 
     self.zput = function( x, y, z, r, g, b ) {
         if ( y < 0 || x < 0 || y >= self.h || x >= self.w ) return; 
-	  
-		x = Math.floor( x );
-		y = Math.floor( y );
+	 
+	   	// should already be integers....	
+		//x = Math.floor( x );
+		//y = Math.floor( y );
 					
         if ( z > self.zbuffer[ y ][ x ]) return;
 
 		self.zbuffer[ y ][ x ] = z;
-		var index = 4 * ( x + y * self.w );
+		var index = ( x + y * self.w ) << 2;
 		
 		/* texture hack for the win! */
 		if ( -1 == b && self.texture ) {
-			var s = Math.floor( r * self.textureW / 256);	
-			var t = Math.floor( g * self.textureH / 256 );	
-			if ( s < 0 ) s+= self.textureW;
-			if ( t < 0 ) t+= self.textureH;
+			var s = ( r % 256 ) / 256 * self.textureW;
+			var t = ( g % 256 ) / 256 * self.textureW;
+			if ( s < 0 ) s += self.textureW;
+			if ( t < 0 ) t += self.textureH;
 
-			var tIndex = 4 * ( s + t * self.textureW );
-			r = self.texture[ tIndex + 0 ];
-			g = self.texture[ tIndex + 1 ];
-			b = self.texture[ tIndex + 2 ];
+			var textureIndex = ( s + t * self.textureW ) << 2;
+			r = self.texture[ textureIndex + 0 ];
+			g = self.texture[ textureIndex + 1 ];
+			b = self.texture[ textureIndex + 2 ];
 		}
 
 		if ( self.normal ) {
-			var q = 0.1 + self.normal.z * 0.9;
-			r *= q;
-			g *= q;
-			b *= q;
+			switch ( self.shadingMethod ) {
+				case 1:
+					var q = ( self.shadingSubtractValue * self.normal.z ) - self.shadingSubtractValue / 2
+					r += q;
+					g += q;
+					b += q;
+					break;
+				case 2:
+					var q = self.shadingShiftValue - ( ( 1 + self.shadingShiftValue ) * self.normal.z );
+					r = r >> q; g = g >> q; b = b >> q;
+					break;
+				default:
+					var q = 0.1 + self.normal.z * 0.9;
+					r *= q;
+					g *= q;
+					b *= q;
+			}
 		}
 
 		self.imageData.data[index + 0 ] = r;
