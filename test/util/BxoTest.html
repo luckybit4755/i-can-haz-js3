@@ -31,40 +31,188 @@
 
         <script src="../../src/util/Matrix.js"></script>
         <script src="../../src/util/Point.js"></script>
+        <script src="../../src/weak//Bresenham6d.js"></script>
         <script src="../../src/weak/TriangularB6.js"></script>
+
         <script>
 			const EPSILON = 0.00000000001; // blecho!
+			const FPS = 64;
 
 			// https://raw.githubusercontent.com/luckybit4755/geom/master/cube.geom 
-			const CUBE = { vertices: [ [ 1, 1, 1 ] , [-1, 1, 1 ] , [-1,-1, 1 ] , [ 1,-1, 1 ] , [ 1, 1,-1 ] , [-1, 1,-1 ] , [-1,-1,-1 ] , [ 1,-1,-1 ] ], indices:[ [1,5,8,4] ,[2,3,7,6] ,[1,2,6,5] ,[3,4,8,7] ,[4,3,2,1] ,[5,6,7,8] ] };
+			const CUBE = { 
+				vertices: [ 
+					  [ 1, 1, 1 ], [-1, 1, 1 ], [-1,-1, 1 ], [ 1,-1, 1 ]
+					, [ 1, 1,-1 ], [-1, 1,-1 ], [-1,-1,-1 ], [ 1,-1,-1 ] 
+				]
+				, indices:[ [1,5,8,4], [2,3,7,6], [1,2,6,5], [3,4,8,7], [4,3,2,1], [5,6,7,8] ] 
+			};
+
+			const makeSides = function() {
+				var sides = [];
+
+				CUBE.indices.forEach(
+					function( indices ) {
+						var side = [];
+						sides.push( side );
+						for ( var i = indices.length - 1 ; i >= 0 ; i-- ) {
+							var index = indices[ i ];
+							var pt = CUBE.vertices[ index - 1 /* ww! */ ]; 
+							side.push( new Point().initArray( pt ) );
+						}
+
+						var range = {
+							  min:[EPSILON,EPSILON,EPSILON]
+							, max:[EPSILON,EPSILON,EPSILON]
+							, diff:[EPSILON,EPSILON,EPSILON]
+						};
+
+						side.forEach(
+							function( vertex ) {
+								for ( var i = 0 ; i < vertex.value.length ; i++ ) {
+									var v = vertex.value[ i ][ 0 ];
+									if ( EPSILON == range.min[ i ] || v < range.min[ i ] ) range.min[ i ] = v;
+									if ( EPSILON == range.max[ i ] || v > range.max[ i ] ) range.max[ i ] = v;
+								}
+							}
+						);
+
+						for ( var i = 0 ; i < range.diff.length ; i++ ) {
+							range.diff[ i ] = range.max[ i ] - range.min[ i ];
+						}
+
+						side.forEach(
+							function( vertex ) {
+								for ( var i = 0 ; i < range.diff.length ; i++ ) {
+									if ( !range.diff[ i ] ) continue;
+									var v = vertex.value[ i ][ 0 ];
+									v = ( v - range.min[ i ] ) / range.diff[ i ];
+									if ( 's' in vertex ) {
+										vertex.t = v * 255;
+									} else {
+										vertex.s = v * 255;
+									}
+								}
+							}
+						);
+					}
+				);
+				return sides;
+			};
+		
+			// knows about s and t parameters hacked into points
+			const midpoint = function( p1, p2 ) {
+				var middle = new Point().tween( p1, p2, 0.5 );
+				middle.s = p1.s + ( p2.s - p1.s ) * 0.5;
+				middle.t = p1.t + ( p2.t - p1.t ) * 0.5;
+				return middle;
+			};
+
+			const splitSide = function( side, sides ) {
+				var middle1 = midpoint( side[ 0 ], side[ 1 ] );
+				var middle2 = midpoint( side[ 1 ], side[ 2 ] );
+				var middle3 = midpoint( side[ 2 ], side[ 3 ] );
+				var middle0 = midpoint( side[ 3 ], side[ 0 ] );
+				var middleX = midpoint( middle0, middle2 );
+
+				// these are backwards (clockwise) like the geom files
+				sides.push( [ middle0, side[ 0 ], middle1, middleX ] );
+				sides.push( [ middleX, middle1, side[ 1 ], middle2 ] );
+				sides.push( [ side[ 3 ], middle0, middleX, middle3 ] );
+				sides.push( [ middle3, middleX, middle2, side[ 2 ] ] );
+			};
+
+			const splitSides = function( sides, splits ) {
+				for ( var i = 0 ; i < splits ; i++ ) {
+					var tmp = [];
+					sides.forEach(
+						function( side ) {
+							splitSide( side, tmp );
+						}
+					);
+					sides = tmp;
+				}
+				return sides;
+			};
+
+			/* move the range of v from [-1:1] to [0:255] */
+			const toColor = function( v ) {
+				return Math.floor( ( v + 1 ) / 2.0 * 255 ) % 255;
+			};
+
+			const makePoint = function( pt, original, sphereWeight, w2, w3 ) {
+				var x = pt[ 0 ][ 0 ];
+				var y = pt[ 1 ][ 0 ];
+				var z = pt[ 2 ][ 0 ];
+			
+				/* clamp the sphereWeight to the [0:1] range */	
+				if ( sphereWeight > 1 ) sphereWeight = 1;
+				if ( sphereWeight < 0 ) sphereWeight = 0;
+				var inverseSphereWeight = 1.0 - sphereWeight;
+
+				var magnitude = Math.sqrt( x * x + y * y + z * z );
+
+				/* changing this to 1 will make a sphere, over 1 will make it more bulbous */
+				sphereWeight /= Math.pow( magnitude, 3 );
+
+				x = ( x * sphereWeight ) + ( x * inverseSphereWeight );
+				y = ( y * sphereWeight ) + ( y * inverseSphereWeight );
+				z = ( z * sphereWeight ) + ( z * inverseSphereWeight );
+
+				/* inverted sphere box thing: 
+				magnitude = Math.sqrt( x * x + y * y + z * z ) * sphereWeight;
+				x *= magnitude;
+				y *= magnitude;
+				z *= magnitude;
+				*/
+
+
+				var screenX = Math.floor( w2 + x * w3 );
+				var screenY = Math.floor( w2 + y * w3 );
+
+				return {
+					  x:screenX
+					, y:screenY
+					, z:z
+					, r:original.s
+					, g:original.t
+					, b:255 - original.s
+					, actualX:x
+					, actualY:y
+					, actualZ:z
+				};
+			};
+
+			// this highlights the problem... right now there are 4
+			// definitions of a "point" in this code base:
+			// {x,y,z,r,g,b} ; [x,y,z] ; [[x],[y],[z]] ; and the Point class
+			const pointToPoint = function( point ) {
+				return new Point().initXYZ( point.actualX, point.actualY, point.actualZ );
+			};
+			const fillPoint = function( point, pt ) {
+				return point.initXYZ( pt.actualX, pt.actualY, pt.actualZ );
+			};
 
 			const interaction = function( id, cb, smokeless ) {
 				var target = document.getElementById( id );
 				if ( !target ) return;
 
 				target.onclick = target.onchange = target.oninput = function( event ) { 
+					var value = target.value;
 					if ( /checkbox/i.test( target.type ) ) {
-						return cb( target.checked, event ); 
+						value = target.checked; 
+					} else {
+						if ( /select/i.test( target.type ) ) {
+							value = target.options[ target.selectedIndex ].value;
+						}
+						if ( /range/i.test( target.type ) ) {
+							var v = parseInt( target.value );
+							var max = parseInt( target.max );
+							var min = parseInt( target.min );
+							var diff = 1.0 * ( max - min );
+							value = ( v - min ) / diff;
+						}
 					}
-					if ( /color/i.test( target.type ) ) {
-						return cb( target.value, event ); 
-					}
-					if ( /select/i.test( target.type ) ) {
-						return cb( 
-								target.options[ target.selectedIndex ].value
-								, event
-								, target 
-						);
-					}
-					if ( /range/i.test( target.type ) ) {
-						var v = parseInt( target.value );
-						var max = parseInt( target.max );
-						var min = parseInt( target.min );
-						var diff = 1.0 * ( max - min );
-						v = ( v - min ) / diff;
-						return cb( v, event, target );
-					}
-					return cb( target, event );
+					return cb( value, event, target );
 				}
 
 				if ( !smokeless ) {
@@ -72,6 +220,18 @@
 				}
 
 				return target;
+			};
+
+			const comma = function( n ) {
+				return ( '' + n ).replace( /\d{1,3}(?=(\d{3})+(?!\d))/g, '$&,' );
+			};
+
+			const nextFrame = function( cb, fps ) {
+				setTimeout(
+					function() {
+						requestAnimationFrame( cb );
+					}, 1000 / fps
+				);
 			};
 
 			const now = function() {
@@ -85,7 +245,7 @@
 				const tb6 = new TriangularB6( canvas );
 				const matrix = new Matrix().common();
 				
-				var time = 0;
+				var renderingTime = 0;
 				var triangles = 0;
 				var begin = now();
 
@@ -115,20 +275,33 @@
 				var textures = {};
 				var currentTexture = false;
 
+				const rangeHandler = function( id, index ) {
+					control.push( 
+						interaction( 
+							id
+							, function( v,e,t ) { 
+								if (t.ignore) return; 
+								paused = true; 
+								angles[ 0 ] = v * Math.PI * 2
+							}
+							, true 
+						) 
+					);
+				}
+
 				const handlers = function() {
 					var c_texture = interaction( 'texture' ,   function( v ) { useTextures = v } );
 					var c_dynamic = interaction( 'dynamic' ,   function( v ) { useDynamicTextures = v } );
+
 					interaction( 'outlines',   function( v ) { tb6.outline = v } );
 					interaction( 'shading',    function( v ) { useShading = v } );
 					interaction( 'background', function( v ) { tb6.fillStyle = v } );
-					interaction( 'timer',      function( v ) { time = 0; triangles = 0; begin = now(); } );
+					interaction( 'timer',      function( v ) { renderingTime = 0; triangles = 0; begin = now(); } );
 					interaction( 'alphonzo',   function( v ) { tb6.fillStyle = 'rgba(190,190,255,0.07)' }, true );
 
-					var p2 = Math.PI * 2;
-
-					control.push( interaction( 'a0', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 0 ] = v * p2 }, true ) );
-					control.push( interaction( 'a1', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 1 ] = v * p2 }, true ) );
-					control.push( interaction( 'a2', function( v,e,t ) { if (t.ignore) return; paused = true; angles[ 2 ] = v * p2 }, true ) );
+					rangeHandler( 'a0', 0 );
+					rangeHandler( 'a1', 1 );
+					rangeHandler( 'a2', 2 );
 
 					canvas.onclick = function() { paused = !paused };
 
@@ -161,167 +334,59 @@
 				};
 				handlers();
 
-				const makeSides = function() {
-					var sides = [];
-
-					CUBE.indices.forEach(
-						function( indices ) {
-							var side = [];
-							sides.push( side );
-							for ( var i = indices.length - 1 ; i >= 0 ; i-- ) {
-								var index = indices[ i ];
-								var pt = CUBE.vertices[ index - 1 /* ww! */ ]; 
-								side.push( new Point().initArray( pt ) );
-							}
-
-							var range = {
-								  min:[EPSILON,EPSILON,EPSILON]
-								, max:[EPSILON,EPSILON,EPSILON]
-								, diff:[EPSILON,EPSILON,EPSILON]
-							};
-
-							side.forEach(
-								function( vertex ) {
-									for ( var i = 0 ; i < vertex.value.length ; i++ ) {
-										var v = vertex.value[ i ][ 0 ];
-										if ( EPSILON == range.min[ i ] || v < range.min[ i ] ) range.min[ i ] = v;
-										if ( EPSILON == range.max[ i ] || v > range.max[ i ] ) range.max[ i ] = v;
-									}
-								}
-							);
-
-							for ( var i = 0 ; i < range.diff.length ; i++ ) {
-								range.diff[ i ] = range.max[ i ] - range.min[ i ];
-							}
-
-							side.forEach(
-								function( vertex ) {
-									for ( var i = 0 ; i < range.diff.length ; i++ ) {
-										if ( !range.diff[ i ] ) continue;
-										var v = vertex.value[ i ][ 0 ];
-										v = ( v - range.min[ i ] ) / range.diff[ i ];
-										if ( 's' in vertex ) {
-											vertex.t = v * 255;
-										} else {
-											vertex.s = v * 255;
-										}
-									}
-								}
-							);
-						}
-					);
-					return sides;
-				};
-				
-				const midpoint = function( p1, p2 ) {
-					var middle = new Point().tween( p1, p2, 0.5 );
-					middle.s = p1.s + ( p2.s - p1.s ) * 0.5;
-					middle.t = p1.t + ( p2.t - p1.t ) * 0.5;
-					return middle;
-				};
-
-				const splitSide = function( side, sides ) {
-					var middle1 = midpoint( side[ 0 ], side[ 1 ] );
-					var middle2 = midpoint( side[ 1 ], side[ 2 ] );
-					var middle3 = midpoint( side[ 2 ], side[ 3 ] );
-					var middle0 = midpoint( side[ 3 ], side[ 0 ] );
-					var middleX = midpoint( middle0, middle2 );
-
-					// these are backwards (clockwise) like the geom files
-					sides.push( [ middle0, side[ 0 ], middle1, middleX ] );
-					sides.push( [ middleX, middle1, side[ 1 ], middle2 ] );
-					sides.push( [ side[ 3 ], middle0, middleX, middle3 ] );
-					sides.push( [ middle3, middleX, middle2, side[ 2 ] ] );
-				};
-
-				const splitSides = function( sides, splits ) {
-					for ( var i = 0 ; i < splits ; i++ ) {
-						var tmp = [];
-						sides.forEach(
-							function( side ) {
-								splitSide( side, tmp );
-							}
-						);
-						sides = tmp;
-					}
-					return sides;
-				};
-
 				var sides = splitSides( makeSides(), 3 );
 
-				const toColor = function( v ) {
-					return Math.floor( ( v + 1 ) / 2.0 * 255 ) % 255;
-				};
+var edge1 = new Point();
+var edge2 = new Point();
+var edge3 = new Point();
+var light = new Point()
+var normal = new Point();
+var norman_the_normal = { x:0, y:0, z:0 };
 
-				const makePoint = function( pt, original ) {
-					var x = pt[ 0 ][ 0 ];
-					var y = pt[ 1 ][ 0 ];
-					var z = pt[ 2 ][ 0 ];
-					
-					var tmp = spherish;
-					if ( tmp > 1 ) tmp = 1;
-					if ( tmp < 0 ) tmp = 0;
-					var xxx = 1.0 - tmp;
-
-					var sz = Math.sqrt( x * x + y * y + z * z );
-					x = ( x / sz * tmp ) + ( x * xxx );
-					y = ( y / sz * tmp ) + ( y * xxx );
-					z = ( z / sz * tmp ) + ( z * xxx );
-
-					var px = Math.floor( w2 + x * w3 );
-					var py = Math.floor( w2 + y * w3 );
-
-					return {
-						  x:px
-						, y:py
-						, z:z
-						, r:original.s
-						, g:original.t
-						, b:tb6.texture ? -1 : 255 - original.s
-						, rx:x
-						, ry:y
-						, rz:z
-					};
-				};
-
-				const triangle = function( rotations, p1, p2, p3 ) {
-					//console.log( 'p1:' + JSON.stringify( p1 ) );
-
+				const drawTriangle = function( rotations, p1, p2, p3 ) {
 					var t1 = matrix.multiply( rotations, p1.value );
 					var t2 = matrix.multiply( rotations, p2.value );
 					var t3 = matrix.multiply( rotations, p3.value );
 
-					var pt1 = makePoint( t1, p1 );
-					var pt2 = makePoint( t2, p2 );
-					var pt3 = makePoint( t3, p3 );
+					var pt1 = makePoint( t1, p1, spherish, w2, w3 );
+					var pt2 = makePoint( t2, p2, spherish, w2, w3 );
+					var pt3 = makePoint( t3, p3, spherish, w2, w3 );
 
-					var n1 = new Point().initXYZ( pt1.rx, pt1.ry, pt1.rz );
-					var n2 = new Point().initXYZ( pt2.rx, pt2.ry, pt2.rz );
-					var n3 = new Point().initXYZ( pt3.rx, pt3.ry, pt3.rz );
+					if ( useTextures && tb6.texture ) {
+						// this is the hack to tell TriangularB6 to use the texture
+						pt1.b = pt2.b = pt3.b = -1;
+					}
 
-					var normal = false;
+					fillPoint( edge1, pt1 );
+					fillPoint( edge2, pt2 );
+					fillPoint( edge3, pt3 );
+
 					if ( useShading ) {
-						normal = new Point().cross( n1.minus( n2 ), n3.minus( n2 ) ).normalize();
-						normal = normal.toXYZ();
+						normal.cross( edge1.minus( edge2 ), edge3.minus( edge2 ) ).normalize();
 
-						if ( normal.z < 0 ) {
-							return;
+						if ( normal.z() < 0 ) {
+							return 0;
 						}
+
+						if ( true ) {
+							// TODO: make this controllable somehow
+							//var light = new Point().initXYZ( 0.4, 0.4, 1 ).normalize();
+							light.initArray( angles )
+							light.value[ 2 ][ 0 ] = angles[ 0 ] + angles[ 1 ];
+							light.normalize();
+							normal.value[ 2 ][ 0 ] = normal.dot( light )
+						}
+
+						norman_the_normal.z = normal.z();
 					} 
 
-					tb6.triangleDraw( pt1, pt2, pt3, normal );
+					tb6.triangleDraw( pt1, pt2, pt3, useShading ? norman_the_normal : false );
+					return true;
 				};
 
-				const comma = function( n ) {
-					return ( '' + n ).replace( /\d{1,3}(?=(\d{3})+(?!\d))/g, '$&,' );
-				};
-
-				const nextFrame = function( cb ) {
-					setTimeout(
-						function() {
-							requestAnimationFrame( cb );
-						}, 1000 / 64
-					);
+				const perSide = function( side, rotations ) {
+					triangles += drawTriangle( rotations, side[ 0 ], side[ 1 ], side[ 3 ] );
+					triangles += drawTriangle( rotations, side[ 3 ], side[ 1 ], side[ 2 ] );
 				};
 
 				const drawWrapper = function() {
@@ -338,7 +403,6 @@
 						info.innerHTML = message;
 					} else {
 						angles[ which ] += angle_increment;
-
 
 						control[ which ].ignore = true;
 						control[ which ].value = Math.floor( 
@@ -369,26 +433,9 @@
 
 					if ( 0 == ++iteration % 44 ) which = ( which + 1 ) % 3;
 
-					if ( 0 == iteration % 33 ) {
-						var tps = comma( Math.floor( triangles / time ) );
-						var trz = comma( triangles );
-						var secz = comma( Math.floor( time * 10 )  / 10.0 );
-						var overall = comma( Math.floor( ( start - begin ) * 10 ) / 10.0 );
-						info.innerHTML = ( ''
-							+ tps + ' triangles per second<br/>' 
-							+ trz + ' triangles in ' + secz + ' seconds drawing ; ' 
-							+ overall + ' seconds total'
-						);
-						console.log( info.innerHTML );
+					for ( var i = 0 ; i < sides.length ; i++ ) {
+						perSide( sides[ i ], rotations );
 					}
-
-					sides.forEach(
-						function( side ) {
-							triangle( rotations, side[ 0 ], side[ 1 ], side[ 3 ] );
-							triangle( rotations, side[ 3 ], side[ 1 ], side[ 2 ] );
-							triangles += 2;
-						}
-					);
 
 					tb6.flush();
 
@@ -400,10 +447,33 @@
 					} 
 
 					var end = new Date().getTime() / 1000.0;
-					time += ( end - start );
+					renderingTime += ( end - start );
 
-					return nextFrame( drawWrapper );
+					if ( 0 == iteration % 33 ) {
+						var total = end - begin;
+
+						var tps = comma( Math.floor( triangles / renderingTime ) );
+						var trz = comma( triangles );
+						var secz = comma( Math.floor( renderingTime * 10 )  / 10.0 );
+						var overall = comma( Math.floor( total * 10 ) / 10.0 );
+						var efficiency = 100 - Math.floor( renderingTime / total * 100 );
+
+						var actualFps = Math.floor( iteration / overall * 10 ) / 10;
+
+						info.innerHTML = ( ''
+							+ tps + ' triangles per second ; '
+							+ actualFps + ' fps vs ' + FPS
+							+ '<br/>'
+							+ trz + ' triangles in ' + secz + ' seconds drawing ; ' 
+							+ overall + ' seconds total<br/>efficiency: '
+							+ efficiency + '% '
+						);
+						console.log( info.innerHTML );
+					}
+
+					return nextFrame( drawWrapper, FPS );
 				};
+
 				drawWrapper();
 			}
 		</script>
