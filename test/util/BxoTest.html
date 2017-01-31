@@ -30,6 +30,10 @@
 				width:512px;
 				display:block;
 			}
+			#pow {
+				width:64px;
+				display:inline;
+			}
 			.dark {
 				background:rgba(0,0,0,0.8);
 		   		padding:0.3em;
@@ -150,11 +154,11 @@
 				return Math.floor( ( v + 1 ) / 2.0 * 255 ) % 255;
 			};
 
-			const makePoint = function( target, pt, original, sphereWeight, screenMiddle, screenSize ) {
+			const makePoint = function( target, pt, original, sphereWeight, screenMiddle, screenSize, thePow ) {
 				var x = pt[ 0 ][ 0 ];
 				var y = pt[ 1 ][ 0 ];
 				var z = pt[ 2 ][ 0 ];
-			
+
 				/* clamp the sphereWeight to the [0:1] range */	
 				if ( sphereWeight > 1 ) sphereWeight = 1;
 				if ( sphereWeight < 0 ) sphereWeight = 0;
@@ -163,7 +167,7 @@
 				var magnitude = Math.sqrt( x * x + y * y + z * z );
 
 				/* changing this to 1 will make a sphere, over 1 will make it more bulbous */
-				sphereWeight /= Math.pow( magnitude, 4 );
+				sphereWeight /= Math.pow( magnitude, thePow );
 
 				x = ( x * sphereWeight ) + ( x * inverseSphereWeight );
 				y = ( y * sphereWeight ) + ( y * inverseSphereWeight );
@@ -281,6 +285,7 @@
 				var useDynamicTextures = true;
 				var useShading = true;
 				var useBodyBg = true;
+				var thePow = 1;
 				
 				var sides = false;
 
@@ -320,9 +325,10 @@
 					interaction( 'shading',    function( v ) { useShading = v } );
 					interaction( 'bodyBg',     function( v ) { useBodyBg = v } );
 					interaction( 'creep',      function( v ) { creep = v } );
-					//interaction( 'background', function( v ) { tb6.fillStyle = v } );
-				   	interaction( 'alphonzo',   function( v ) { tb6.fillStyle = 'rgba(255,128,92,0.07)' }, true );
+				   	interaction( 'alphonzo',  function( v ) { tb6.fillStyle = 'rgba(255,128,92,0.07)' }, true );
 					interaction( 'method',    function( v ) { tb6.shadingMethod = parseInt( v ) } );
+					interaction( 'pow',       function( v ) { thePow = v * 13; } );
+					//interaction( 'background', function( v ) { tb6.fillStyle = v } );
 
 					var timer = interaction( 
 						  'timer'
@@ -394,9 +400,9 @@
 					var t2 = MatrixMath.mm_4_4_4_1( rotations, p2.value );
 					var t3 = MatrixMath.mm_4_4_4_1( rotations, p3.value );
 
-					makePoint( roundedPoint1, t1, p1, spherish, screenMiddle, screenSize );
-					makePoint( roundedPoint2, t2, p2, spherish, screenMiddle, screenSize );
-					makePoint( roundedPoint3, t3, p3, spherish, screenMiddle, screenSize );
+					makePoint( roundedPoint1, t1, p1, spherish, screenMiddle, screenSize, thePow );
+					makePoint( roundedPoint2, t2, p2, spherish, screenMiddle, screenSize, thePow );
+					makePoint( roundedPoint3, t3, p3, spherish, screenMiddle, screenSize, thePow );
 
 					if ( useTextures && tb6.texture ) {
 						// this is the hack to tell TriangularB6 to use the texture
@@ -604,6 +610,8 @@
 					<option value="7">7</option>
 					<option value="8">8</option>
 				</select>
+				pow:
+				<input id="pow" type="range" min="0" max="64" step="1" value="4.5"/>
 			</div>
 			<div>
 				<button id="timer">reset timer</button>
@@ -624,5 +632,6 @@
 		<img src="images/lava-texture.jpg"></img>
 		<img src="images/stars.png"></img>
 		<img src="images/wood.jpg"></img>
+		<img src="images/tsymbol.png"></img>
 	</BODY>
 </HTML>
