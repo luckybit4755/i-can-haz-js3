@@ -316,7 +316,6 @@
 						} 
 					);
 
-					interaction( 'split',      function( v ) { sides = splitSides( makeSides(), parseInt( v ) ) } );
 					interaction( 'outlines',   function( v ) { tb6.outline = v } );
 					interaction( 'shading',    function( v ) { useShading = v } );
 					interaction( 'bodyBg',     function( v ) { useBodyBg = v } );
@@ -325,7 +324,7 @@
 				   	interaction( 'alphonzo',   function( v ) { tb6.fillStyle = 'rgba(255,128,92,0.07)' }, true );
 					interaction( 'method',    function( v ) { tb6.shadingMethod = parseInt( v ) } );
 
-					interaction( 
+					var timer = interaction( 
 						  'timer'
 						, function( v ) { 
 							iteration = renderingTime = triangles = 0; 
@@ -335,6 +334,7 @@
 							info.innerHTML = '<span class="hearts">' + s + '</span>' 
 						} 
 					);
+					interaction( 'split', function( v ) { sides = splitSides( makeSides(), parseInt( v ) ); timer.click() } );
 
 					rangeHandler( 'a0', 0 );
 					rangeHandler( 'a1', 1 );
