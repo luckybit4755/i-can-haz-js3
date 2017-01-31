@@ -6,6 +6,9 @@
 			body {
 				font-family: Comic Sans MS, sans;
                 background:black;
+				background-repeat:no-repeat;
+				background-position:-256px -256px;
+				background-size:2048px 2048px;
             }
 			div {
 				color:#FF9;
@@ -18,7 +21,7 @@
                 height:512px;
                 margin: auto;
                 display: block;
-                padding-top:1em;
+                padding-top:0.3em;
             }
 			img {
 				display:none;
@@ -26,6 +29,11 @@
 			input[type="range"] { 
 				width:512px;
 				display:block;
+			}
+			.dark {
+				background:rgba(0,0,0,0.8);
+		   		padding:0.3em;
+				margin-top:0.3em;
 			}
 		</style>
 
@@ -152,7 +160,7 @@
 				var magnitude = Math.sqrt( x * x + y * y + z * z );
 
 				/* changing this to 1 will make a sphere, over 1 will make it more bulbous */
-				sphereWeight /= Math.pow( magnitude, 3 );
+				sphereWeight /= Math.pow( magnitude, 4 );
 
 				x = ( x * sphereWeight ) + ( x * inverseSphereWeight );
 				y = ( y * sphereWeight ) + ( y * inverseSphereWeight );
@@ -186,6 +194,7 @@
 			const pointToPoint = function( point ) {
 				return new Point().initXYZ( point.actualX, point.actualY, point.actualZ );
 			};
+
 			const fillPoint = function( point, pt ) {
 				return point.initXYZ( pt.actualX, pt.actualY, pt.actualZ );
 			};
@@ -263,11 +272,14 @@
 				const h = parseInt( canvas.height );
 
 				const screenMiddle = w * 0.5;
-				const screenSize = w * 0.28;
+				const screenSize = w * 0.28 * 1.3;
 
 				var useTextures = true;
 				var useDynamicTextures = true;
 				var useShading = true;
+				var useBodyBg = true;
+				
+				var sides = false;
 
 				var creep = false;
 				var paused = false;
@@ -291,12 +303,22 @@
 
 				const handlers = function() {
 					var c_texture = interaction( 'texture' ,   function( v ) { useTextures = v } );
-					var c_dynamic = interaction( 'dynamic' ,   function( v ) { useDynamicTextures = v } );
+					var c_dynamic = interaction( 
+						'dynamic' 
+						, function( v ) { 
+							if ( v ) {
+								c_texture.checked = useTextures = v;
+							}
+							useDynamicTextures = v 
+						} 
+					);
 
+					interaction( 'split',      function( v ) { sides = splitSides( makeSides(), parseInt( v ) ) } );
 					interaction( 'outlines',   function( v ) { tb6.outline = v } );
 					interaction( 'shading',    function( v ) { useShading = v } );
+					interaction( 'bodyBg',     function( v ) { useBodyBg = v } );
 					interaction( 'creep',      function( v ) { creep = v } );
-					interaction( 'background', function( v ) { tb6.fillStyle = v } );
+					//interaction( 'background', function( v ) { tb6.fillStyle = v } );
 					interaction( 'timer',      function( v ) { iteration = renderingTime = triangles = 0; begin = now(); } );
 				   	interaction( 'alphonzo',   function( v ) { tb6.fillStyle = 'rgba(255,128,92,0.07)' }, true );
 					interaction( 'method',    function( v ) { tb6.shadingMethod = parseInt( v ) } );
@@ -312,14 +334,18 @@
 					for ( var i = 0 ; i < images.length ; i++ ) {
 						var image = images[ i ];
 						var name = image.getAttribute( 'src' ).replace( /.*\//, '' ).replace( /\.[a-z]+$/, '' );
-
+							
 						tb6.context.drawImage( image, 0, 0 );
 						var imageData = tb6.context.getImageData( 0, 0, 256, 256 );
+						imageData.image = image; // tricky!
 
-						textures[ name ] = imageData.data;
+						textures[ name ] = imageData;
 						var option = document.createElement( 'option' );
 						option.value = option.innerHTML = name; 
 						texture.appendChild( option );
+						if ( 0 == i ) {
+							currentTexture = imageData;
+						}
 					};
 
 					interaction( 
@@ -332,11 +358,12 @@
 							c_texture.checked = true;
 							c_dynamic.checked = false;
 						}
+						, true
 					);
 				};
 				handlers();
 
-				var sides = splitSides( makeSides(), 5 );
+				sides = splitSides( makeSides(), 5 );
 
 				// hacky workspace to avoid expensive object creation
 				var edge1 = new Point();
@@ -416,7 +443,24 @@
 				const drawWrapper = function() {
 					var start = new Date().getTime() / 1000.0;
 
+					//void /ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+					tb6.context.drawImage( 
+						canvas
+						, 0
+						, 0 
+						, tb6.w
+						, tb6.h
+						, -tb6.w * 0.33
+						, -tb6.h * 0.33
+						, tb6.w  * 2
+						, tb6.h  * 2
+					);
+					tb6.context.fillStyle = 'rgba(33,33,33,0.8)';
+					tb6.context.fillRect( 0, 0, tb6.w, tb6.h );
+					var background = tb6.context.getImageData(0, 0, tb6.w, tb6.h);
+
 					tb6.clear();
+					tb6.imageData = background;
 
 					var rotations = MatrixMath.makeRotations( angles[ 0 ], angles[ 1 ], angles[ 2 ] );
 
@@ -446,16 +490,16 @@
 						}
 						if ( useTextures ) {
 							if ( !useDynamicTextures  ) { 
-								tb6.setTexture( currentTexture, 256, 256 );
+								tb6.setTexture( currentTexture.data, 256, 256 );
 							}
 						} else {
 							if ( tb6.texture ) {
 								tb6.setTexture( null, 0, 0 );
 							}
 						}
-					}
 
-					if ( 0 == ++iteration % 44 ) which = ( which + 1 ) % 3;
+						if ( 0 == ++iteration % 44 ) which = ( which + 1 ) % 3;
+					}
 
 					for ( var i = 0 ; i < sides.length ; i++ ) {
 						perSide( sides[ i ], rotations );
@@ -474,25 +518,32 @@
 					renderingTime += ( end - start );
 
 					if ( 0 == iteration % 33 ) {
-						var total = end - begin;
+						var totalTime = end - begin;
 
-						var tps = comma( Math.floor( triangles / renderingTime ) );
+						var ktps = Math.floor( triangles / renderingTime / 100 ) / 10;
+						var ktpz = Math.floor( triangles / totalTime / 100 ) / 10;
+
 						var trz = comma( triangles );
 						var secz = comma( Math.floor( renderingTime * 10 )  / 10.0 );
-						var overall = comma( Math.floor( total * 10 ) / 10.0 );
-						var efficiency = 100 - Math.floor( renderingTime / total * 100 );
+						var overall = comma( Math.floor( totalTime * 10 ) / 10.0 );
+						var efficiency = 100 - Math.floor( renderingTime / totalTime * 100 );
 
 						var actualFps = Math.floor( iteration / overall * 10 ) / 10;
 
 						info.innerHTML = ( ''
-							+ tps + ' triangles per second ; '
-							+ actualFps + ' fps vs ' + FPS
+							+ ktps + ' kila-triangles per second ('
+							+ ktpz + ' wallclock)'
 							+ '<br/>'
 							+ trz + ' triangles in ' + secz + ' seconds drawing ; ' 
 							+ overall + ' seconds total<br/>efficiency: '
-							+ efficiency + '% '
+							+ efficiency + '% ; '
+							+ actualFps + ' fps vs ' + FPS
 						);
 						console.log( info.innerHTML );
+					}
+
+					if ( useBodyBg ) {
+						document.body.style.backgroundImage = 'url(' + canvas.toDataURL('image/png')+ ')';
 					}
 
 					return nextFrame( drawWrapper, FPS );
@@ -503,40 +554,55 @@
 		</script>
 	</HEAD>
 	<BODY>
-		<canvas width="512" height="512"></canvas>
-		<div>
-			<input type="checkbox" checked="ww" id="texture"/>  texture
-			<input type="checkbox" ichecked="ww" id="dynamic"/>  dynamic texture
-			<input type="checkbox" ichecked="ww" id="outlines"/> outlines
-			<input type="checkbox" checked="ww" id="shading"/>  shading
-			<input type="checkbox" ichecked="ww" id="creep"/>  creep
+		<canvas id="canvas" width="512" height="512"></canvas>
+		<div class="dark">
+			<div>
+				<input type="checkbox" checked="ww" id="texture"/>  texture
+				<input type="checkbox" checked="ww" id="dynamic"/>  dynamic 
+				<input type="checkbox" checked="ww" id="outlines"/> outlines
+				<input type="checkbox" checked="ww" id="shading"/>  shading
+				<input type="checkbox" checked="ww" id="creep"/>    creep
+				<input type="checkbox" ichecked="ww" id="bodyBg"/>  bodyBg
+			</div>
+			<div>
+				texture:    <select id="images"></select>
+				shading:
+				<select id="method">
+					<option value="0">0</option>
+					<option value="1">1</option>
+					<option value="2" selected="hh">2</option>
+				</select>
+				split
+				<select id="split">
+					<option value="0">0</option>
+					<option value="1">1</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4" selected="sigh">4</option>
+					<option value="5">5</option>
+					<option value="6">6</option>
+					<option value="7">7</option>
+					<option value="8">8</option>
+				</select>
+			</div>
+			<div>
+				<button id="timer">reset timer</button>
+				<button id="alphonzo">alphonzo</button>
+			</div>
+			<div>
+				<input id="a0" type="range" min="0" max="1000" step="1"/>
+				<input id="a1" type="range" min="0" max="1000" step="1"/>
+				<input id="a2" type="range" min="0" max="1000" step="1"/>
+			</div>
+			<div id="info">u&lt;3 it!</div>
 		</div>
-		<div>
-			background: <input type="color" id="background" value="#9090F0"/> 
-			texture:    <select id="images"></select>
-			shading method:
-			<select id="method">
-				<option value="0">0</option>
-				<option value="1">1</option>
-				<option value="2">2</option>
-			</select>
-		</div>
-		<div>
-			<button id="timer">reset timer</button>
-			<button id="alphonzo">alphonzo</button>
-		</div>
-		<div>
-			<input id="a0" type="range" min="0" max="1000" step="1"/>
-			<input id="a1" type="range" min="0" max="1000" step="1"/>
-			<input id="a2" type="range" min="0" max="1000" step="1"/>
-		</div>
-		<div id="info">u&lt;3 it!</div>
 
+		<img src="images/bedrock1.jpg"></img>
 		<img src="images/stone-wall.jpg"></img>
 		<img src="images/water-texture.jpg"></img>
 		<img src="images/grass-texture.jpg"></img>
 		<img src="images/lava-texture.jpg"></img>
 		<img src="images/stars.png"></img>
-		<img src="images/bedrock1.jpg"></img>
+		<img src="images/wood.jpg"></img>
 	</BODY>
 </HTML>
