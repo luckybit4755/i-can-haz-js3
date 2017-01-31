@@ -35,6 +35,9 @@
 		   		padding:0.3em;
 				margin-top:0.3em;
 			}
+			.hearts {
+				color:#FF6666;
+			}
 		</style>
 
         <script src="../../src/util/MatrixMath.js"></script>
@@ -319,9 +322,19 @@
 					interaction( 'bodyBg',     function( v ) { useBodyBg = v } );
 					interaction( 'creep',      function( v ) { creep = v } );
 					//interaction( 'background', function( v ) { tb6.fillStyle = v } );
-					interaction( 'timer',      function( v ) { iteration = renderingTime = triangles = 0; begin = now(); } );
 				   	interaction( 'alphonzo',   function( v ) { tb6.fillStyle = 'rgba(255,128,92,0.07)' }, true );
 					interaction( 'method',    function( v ) { tb6.shadingMethod = parseInt( v ) } );
+
+					interaction( 
+						  'timer'
+						, function( v ) { 
+							iteration = renderingTime = triangles = 0; 
+							begin = now(); 
+							var s = '&#x2665 ';
+							for ( var i = 0 ; i < 7 ; i++ ) s += s;
+							info.innerHTML = '<span class="hearts">' + s + '</span>' 
+						} 
+					);
 
 					rangeHandler( 'a0', 0 );
 					rangeHandler( 'a1', 1 );
@@ -529,6 +542,12 @@
 						var efficiency = 100 - Math.floor( renderingTime / totalTime * 100 );
 
 						var actualFps = Math.floor( iteration / overall * 10 ) / 10;
+						var triangleCount = Math.floor( ( 2 * sides.length ) / 100 ) / 10;
+						var thousand = 'thousand';
+						if ( triangleCount < 2 ) {
+							triangleCount = 2 * sides.length;
+							thousand = '';
+						}
 
 						info.innerHTML = ( ''
 							+ ktps + ' kila-triangles per second ('
@@ -537,7 +556,8 @@
 							+ trz + ' triangles in ' + secz + ' seconds drawing ; ' 
 							+ overall + ' seconds total<br/>efficiency: '
 							+ efficiency + '% ; '
-							+ actualFps + ' fps vs ' + FPS
+							+ actualFps + ' fps vs ' + FPS + ' ; ' 
+							+ triangleCount + ' ' + thousand + ' triangles per frame'
 						);
 						console.log( info.innerHTML );
 					}
