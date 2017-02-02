@@ -1,5 +1,5 @@
-const SkyBox = function() {
-	this.init();
+const SkyBox = function( splits ) {
+	this.init( splits ? splits : 4 );
 };
 
 const FacePoint = function( vertexIndex, s, t ) {
@@ -30,7 +30,6 @@ Face.prototype = {
 			index = lookup[ hash ];
 		} else {
 			index = vertices.length;
-			if( debug ) console.log( 'miss:' + index );
 			vertices.push( middle );
 			lookup[ hash ] = index;
 		}
@@ -52,7 +51,6 @@ Face.prototype = {
 	}
 
 	, split: function( iterations, vertices, lookup ) {
-console.log( 'split:' + iterations );
 		var f1 = this.facePoints[ 0 ];
 		var f2 = this.facePoints[ 1 ];
 		var f3 = this.facePoints[ 2 ];
@@ -62,7 +60,6 @@ console.log( 'split:' + iterations );
 		var index3 = f3.vertexIndex;
 if ( index1 == index2 || index1 == index3 || index2 == index3 ) {
 console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
-
 }
 
 		var point1 = vertices[ index1 ];
@@ -135,21 +132,11 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 		var point1 = vertices[ index1 ];
 		var point2 = vertices[ index2 ];
 		var point3 = vertices[ index3 ];
-/*
-		if ( !point1 ) console.log( 'point1: ' + point1 + ' fom ' + index1 );
-		if ( !point2 ) console.log( 'point2: ' + point2 + ' fom ' + index2 );
-		if ( !point3 ) console.log( 'point3: ' + point3 + ' fom ' + index3 );
-*/
 
 		edge1.initPoint( point1 ).minus( point2 );
 		edge3.initPoint( point3 ).minus( point2 );
 
 		this.normal = new Point().cross( edge1, edge3 ).normalize();
-		console.log( ''
-				//+ this.normal.toString() + ' fom ' + edge1 + ' and ' + edge3  
-			//+ ' fom: ' + [point1,point2,point3].join(',')
-			+ ' aka: ' + [index1,index2,index3].join(',')
-			);
 
 		if ( this.children ) {
 			for ( var i = 0 ; i < this.children.length ; i++ ) {
@@ -158,47 +145,60 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 		}
 	}
 
-	, display: function( tb6, matrix, vertices, transformedNormal, threshold, textures ) {
+	, getModified( matrix, original, vertices, transformed, index ) {
+		if ( !transformed[ index ] ) {
+			transformed[ index ] = true;
+			MatrixMath.mm_4_4_4_1( 
+				matrix
+				, original[ index ].value
+				, vertices[ index ].value
+			);
+		}
+		return vertices[ index ];
+	}
+
+	, display: function( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures, sizePoint ) {
 		MatrixMath.mm_4_4_4_1( matrix, this.normal.value, transformedNormal.value )
 	
-		if ( true ) {
-			var screenArea = (
-				this.children
-				? transformedNormal.size() * tb6.w2
-				: threshold - 33
-			);
-			
-			if ( screenArea < threshold ) {
-				this.simpleDraw( tb6, vertices, transformedNormal, threshold, textures );
-			} else {
-				for ( var i = 0 ; i < this.children.length ; i++ ) {
-					this.children[ i ].display( tb6, matrix, vertices, transformedNormal, threshold, textures );
-				}
-			}
-
+		var screenArea = 0;
+		if ( !this.children ) {
+			screenArea = -33;
 		} else {
-			this.simpleDraw( tb6, vertices, transformedNormal, threshold, textures );
-			if ( this.children ) {
-				for ( var i = 0 ; i < this.children.length ; i++ ) {
+			var index1 = this.facePoints[ 0 ].vertexIndex;
+			var index3 = this.facePoints[ 2 ].vertexIndex;
+			var point1 = this.getModified( matrix, original, vertices, transformed, index1 ); //vertices[ index1 ];
+			var point3 = this.getModified( matrix, original, vertices, transformed, index3 ); //vertices[ index3 ];
 
-					this.children[ i ].display( tb6, matrix, vertices, transformedNormal, threshold, textures );
-				}
+			// this is fiddly hackery :-(
+			sizePoint.initPoint( point3 ).minus( point1 );
+			screenArea = sizePoint.size2() * tb6.w2 * 4; 
+		}
+			
+		if ( screenArea < threshold ) {
+			return this.drawSelf( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures );
+		} else {
+			var count = this.drawChildren( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures, sizePoint );
+			if ( count < 2 ) {
+				count += this.drawSelf( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures );
 			}
+			return count;
 		}
 	}
 
-	, simpleDraw: function( tb6, vertices, transformedNormal, threshold, textures ) {
-//console.log( transformedNormal.value );
-		if ( transformedNormal.value[2][0] < 0 ) return;
+	, drawSelf: function( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures ) {
+		if ( transformedNormal.value[2][0] < 0 ) return 0;
 
 		var texture = textures ? textures[ this.textureIndex ] : false;
 		var index1 = this.facePoints[ 0 ].vertexIndex;
 		var index2 = this.facePoints[ 1 ].vertexIndex;
 		var index3 = this.facePoints[ 2 ].vertexIndex;
 
-		var point1 = vertices[ index1 ];
-		var point2 = vertices[ index2 ];
-		var point3 = vertices[ index3 ];
+		//var point1 = vertices[ index1 ];
+		//var point2 = vertices[ index2 ];
+		//var point3 = vertices[ index3 ];
+		var point1 = this.getModified( matrix, original, vertices, transformed, index1 ); //vertices[ index1 ];
+		var point2 = this.getModified( matrix, original, vertices, transformed, index2 ); //vertices[ index2 ];
+		var point3 = this.getModified( matrix, original, vertices, transformed, index3 ); //vertices[ index3 ];
 		
 		this.facePoints[ 0 ].vertex = point1;
 		this.facePoints[ 1 ].vertex = point2;
@@ -226,8 +226,17 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 			, transformedNormal
 			, texture
 		);
+
+		return 1;
 	}
-			
+
+	, drawChildren: function( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures, sizePoint ) {
+		var count = 0;
+		for ( var i = 0 ; i < this.children.length ; i++ ) {
+			count += this.children[ i ].display( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures, sizePoint );
+		}
+		return count;
+	}
 }
 
 SkyBox.prototype = {
@@ -238,7 +247,7 @@ SkyBox.prototype = {
 	, LEFT:   4
 	, RIGHT:  5
 
-	, init: function() {
+	, init: function( splits ) {
 		this.textures = [];
 		for ( var i = 0 ; i <= this.RIGHT; i++ ) this.textures.push( false );
 
@@ -277,7 +286,7 @@ SkyBox.prototype = {
 			, new Face( this.RIGHT, [ new FacePoint( 2, 0, 0 ), new FacePoint( 6, 0, 0 ), new FacePoint( 5, 0, 0 ) ] )
 		]
 
-		this.split( 6 );
+		this.split( splits );
 		this.normals();
 		this.makeWorkspace();
 	}
@@ -291,8 +300,6 @@ SkyBox.prototype = {
 
 		for ( var i = 0 ; i < this.faces.length ; i++ ) {
 			this.faces[ i ].split( iterations, this.vertices, lookup );
-			console.log( 'f:' + this.faces[ i ] );
-
 		}
 	}
 
@@ -307,28 +314,34 @@ SkyBox.prototype = {
 
 	, makeWorkspace: function() {
 		this.modifiedPoints = [];
+		this.hasBeenModified = [];
 		// 3 point in the triangle and 1 for the normal
 		for ( var i = 0 ; i < this.vertices.length ; i++ ) {
 			this.modifiedPoints.push( new Point() );
+			this.hasBeenModified.push( false );
 		}
 		this.modifiedNormal = new Point();
+		this.sizePoint = new Point();
 	}
 
 	, display: function( tb6, matrix, threshold ) {
 		tb6.outline = 'snit';
 		tb6.fillStyle = 'gray';
-		for ( var i = 0 ; i < this.vertices.length ; i++ ) {
-			MatrixMath.mm_4_4_4_1( 
-				matrix
-				, this.vertices[ i ].value
-				, this.modifiedPoints[ i ].value
-			);
-		}
+
+		this.hasBeenModified.fill( false );
+		var count = 0;
 
 		for ( var i = 0 ; i < this.faces.length ; i++ ) {
 			var face = this.faces[ i ];
-			face.display( tb6, matrix, this.modifiedPoints, this.modifiedNormal, threshold, this.textures );
+			count += face.display( tb6, matrix, this.vertices, this.modifiedPoints, this.hasBeenModified, this.modifiedNormal, threshold, this.textures, this.sizePoint );
 		}
+
+		var k2 = 0;
+		for ( var i = 0 ; i < this.vertices.length ; i++ ) {
+			if ( this.hasBeenModified[ i ] ) k2++;
+		}
+
+		return count + k2 / 100000.0;
 	}
 };
 
