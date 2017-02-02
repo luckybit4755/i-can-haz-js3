@@ -6,6 +6,9 @@
 			body {
 				font-family: Comic Sans MS, sans;
 			}
+			input[type="range"] {
+				width:498px;
+			}
 		</style>
 
         <script src="../../src/util/MatrixMath.js"></script>
@@ -26,9 +29,26 @@
 			window.onload = function() {
                 const canvas = document.getElementsByTagName( 'canvas' )[ 0 ];
                 const tb6 = new TriangularB6( canvas );
+
+				const info = document.getElementById( 'info' );
+
+				var scale = 1;
+				const scaleRange = document.getElementById( 'scale' );
+				scaleRange.onclick = scaleRange.onchange = scaleRange.oninput = function() {
+					scale = scaleRange.value;
+				};
+				scaleRange.click();
+				
+				var threshold = 80;
+				const thresholdRange = document.getElementById( 'threshold' );
+				thresholdRange.onclick = thresholdRange.onchange = thresholdRange.oninput = function() {
+					threshold = thresholdRange.value;
+				};
+				thresholdRange.click();
+
                 MatrixMath.init();
 				
-				var skyBox = new SkyBox();
+				var skyBox = new SkyBox( 7 );
 
                 var iteration = 0;
                 var angles = [0,0,0];
@@ -43,7 +63,12 @@
 
                     var rotations = MatrixMath.makeRotations( angles[ 0 ], angles[ 1 ], angles[ 2 ] );
 
-					skyBox.display( tb6, rotations, 4 );
+					var tmp = MatrixMath.multiply( rotations, MatrixMath.scale( scale, scale, scale ) );
+					rotations = tmp;
+
+					var count = skyBox.display( tb6, rotations, threshold );
+					info.innerHTML = 'using ' + count + ' with threshold:' + threshold + ' and scale:' + scale;
+
 					tb6.flush();
 
 					if ( !false ) {
@@ -56,5 +81,14 @@
 	</HEAD>
 	<BODY>
 		<canvas width="512" height="512"></canvas>
+		<div id="info"></div>
+		<div>
+			<input id="scale" type="range" value="1" min="0" max="4" step="0.01"></input>
+			scale
+		</div>
+		<div>
+			<input id="threshold" type="range" value="64" min="0" max="256" step="1"></input>
+			threshold
+		</div>
 	</BODY>
 </HTML>
