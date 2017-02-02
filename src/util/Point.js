@@ -4,10 +4,10 @@ const Point = function() {
 
 Point.prototype = {
 	init: function(x,y,z) {
-		this.initXYZ( x?x:0, y?y:0, z?z:0 );
+		return this.initXYZ( x?x:0, y?y:0, z?z:0);
 	}
 
-	, initXYZ: function( x, y, z ) {
+	, initXYZ: function( x, y, z) {
 		this.value = [ [x], [y], [z], [0] ];
 		return this;
 	}
@@ -54,10 +54,16 @@ Point.prototype = {
 		return this;
 	}
 
-	, normalize: function() {
+	, normalize: function( percent ) {
+		if ( undefined != percent && 0 == percent ) return this;
+
 		var size2 = this.size2();
-		if ( 0 == size2 ) return;
+		if ( 0 == size2 ) return this;
 		size2 = Math.sqrt( size2 );
+
+		if ( undefined != percent ) {
+			size2 *= percent;
+		}
 
 		this.value[ 0 ][ 0 ] /= size2;
 		this.value[ 1 ][ 0 ] /= size2;
@@ -101,7 +107,16 @@ Point.prototype = {
 	}
 
 	, tween: function( a, b, t ) {
-		return this.initPoint( a ).minus( b ).scale( t ).add( b );
+		return this.initPoint( b ).minus( a ).scale( t ).add( a );
+	}
+	
+	, hashCode: function( factor ) {
+		if ( !factor ) factor = 1000;
+		return ( 0
+			+ Math.floor( this.value[ 0 ][ 0 ] * factor )
+			+ Math.floor( this.value[ 1 ][ 0 ] * factor * factor )
+			+ Math.floor( this.value[ 2 ][ 0 ] * factor * factor * factor )
+		);
 	}
 };
 

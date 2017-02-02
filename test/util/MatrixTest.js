@@ -1,6 +1,6 @@
 #!/usr/bin/env node 
 
-const Matrix = require( '../../src/util/Matrix' );
+const MatrixMath = require( '../../src/util/MatrixMath' );
 
 const MatrixTest = function() {
 	const self = this;
@@ -8,10 +8,12 @@ const MatrixTest = function() {
 	self.main = function( args ) {
 		console.log( 'hello MatrixTest' );
 
-		var matrix = new Matrix();
+		var matrix = MatrixMath;
 		var m1, m2, rz;
 
-		matrix.common();
+		matrix.init();
+		console.log( '-----------' );
+		console.log( matrix.multiply( [[1,2,3]] , [[4],[5],[6]]) );
 
 		console.log( '-----------' );
 
@@ -19,6 +21,7 @@ const MatrixTest = function() {
 		m2 = [ ['a','b','c'] ];
 		rz = matrix.writeMultiplication( m1, m2 );
 		self.symbolic( rz, m1, m2 );
+
 		
 		m1 = [ ['a','b','c'] ];
 		m2 = [ ['x'] ,['y'] ,['z'] ];

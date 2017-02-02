@@ -1,0 +1,60 @@
+<HTML>
+	<HEAD>
+		<TITLE>SkyboxTest</TITLE>
+
+		<style>
+			body {
+				font-family: Comic Sans MS, sans;
+			}
+		</style>
+
+        <script src="../../src/util/MatrixMath.js"></script>
+        <script src="../../src/util/SkyBox.js"></script>
+        <script src="../../src/util/Point.js"></script>
+        <script src="../../src/weak//Bresenham6d.js"></script>
+        <script src="../../src/weak/TriangularB6.js"></script>
+
+		<script type="text/javascript">
+			const nextFrame = function( cb, fps ) {
+				setTimeout(
+					function() {
+						requestAnimationFrame( cb );
+					}, 1000 / fps
+				);
+			};
+
+			window.onload = function() {
+                const canvas = document.getElementsByTagName( 'canvas' )[ 0 ];
+                const tb6 = new TriangularB6( canvas );
+                MatrixMath.init();
+				
+				var skyBox = new SkyBox();
+
+                var iteration = 0;
+                var angles = [0,0,0];
+                var which = 0;
+                const angle_increment = 0.08;
+
+				var draw = function() {
+					tb6.clear();
+
+					angles[ which % 3 ] += angle_increment;
+					if ( 0 == iteration++ % 33 ) which++;
+
+                    var rotations = MatrixMath.makeRotations( angles[ 0 ], angles[ 1 ], angles[ 2 ] );
+
+					skyBox.display( tb6, rotations, 4 );
+					tb6.flush();
+
+					if ( !false ) {
+						nextFrame( draw, 32 );
+					}
+				};
+				draw();
+			};
+		</script>
+	</HEAD>
+	<BODY>
+		<canvas width="512" height="512"></canvas>
+	</BODY>
+</HTML>

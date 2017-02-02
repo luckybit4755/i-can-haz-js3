@@ -27,8 +27,8 @@
 				display:none;
 			}
 			input[type="range"] { 
-				width:512px;
-				display:block;
+				width:480px;
+				display:inline-block;
 			}
 			#pow {
 				width:64px;
@@ -97,14 +97,16 @@
 
 						side.forEach(
 							function( vertex ) {
+								var duh = true;
 								for ( var i = 0 ; i < range.diff.length ; i++ ) {
 									if ( !range.diff[ i ] ) continue;
 									var v = vertex.value[ i ][ 0 ];
 									v = ( v - range.min[ i ] ) / range.diff[ i ];
-									if ( 's' in vertex ) {
-										vertex.t = v * 255;
-									} else {
+									if ( duh ) {
 										vertex.s = v * 255;
+										duh = false;
+									} else {
+										vertex.t = v * 255;
 									}
 								}
 							}
@@ -114,12 +116,11 @@
 				return sides;
 			};
 		
-			// knows about s and t parameters hacked into points
 			const midpoint = function( p1, p2 ) {
-				var middle = new Point().tween( p1, p2, 0.5 );
-				middle.s = p1.s + ( p2.s - p1.s ) * 0.5;
-				middle.t = p1.t + ( p2.t - p1.t ) * 0.5;
-				return middle;
+				var midpoint = new Point().tween( p1, p2, 0.5 );
+				midpoint.s = p1.s + ( p2.s - p1.s ) * 0.5;
+				midpoint.t = p1.t + ( p2.t - p1.t ) * 0.5;
+				return midpoint;
 			};
 
 			const splitSide = function( side, sides ) {
@@ -193,13 +194,6 @@
 				target.actualY = y;
 				target.actualZ = z;
 				return target;
-			};
-
-			// this highlights the problem... right now there are 4
-			// definitions of a "point" in this code base:
-			// {x,y,z,r,g,b} ; [x,y,z] ; [[x],[y],[z]] ; and the Point class
-			const pointToPoint = function( point ) {
-				return new Point().initXYZ( point.actualX, point.actualY, point.actualZ );
 			};
 
 			const fillPoint = function( point, pt ) {
@@ -410,8 +404,6 @@
 					}
 
 					if ( useShading ) {
-				//return point.initXYZ( pt.actualX, pt.actualY, pt.actualZ );
-						
 						fillPoint( edge1, roundedPoint1 );
 						fillPoint( edge2, roundedPoint2 );
 						fillPoint( edge3, roundedPoint3 );
@@ -423,8 +415,6 @@
 						}
 
 						if ( true ) {
-							// TODO: make this controllable somehow
-							//var light = new Point().initXYZ( 0.4, 0.4, 1 ).normalize();
 							light.initArray( angles )
 							light.value[ 2 ][ 0 ] = angles[ 0 ] + angles[ 1 ];
 							light.normalize();
@@ -445,11 +435,15 @@
 						roundedPoint3.g += textureCreep;
 					}
 
+					var lll = light.toXYZ();
+					lll.power = 3;
+
 					tb6.triangleDraw( 
 						  roundedPoint1
 						, roundedPoint2
 						, roundedPoint3
 						, useShading ? norman_the_normal : false 
+						, lll
 					);
 					return true;
 				};
@@ -584,19 +578,21 @@
 		<div class="dark">
 			<div>
 				<input type="checkbox" checked="ww" id="texture"/>  texture
-				<input type="checkbox" checked="ww" id="dynamic"/>  dynamic 
-				<input type="checkbox" checked="ww" id="outlines"/> outlines
+				<input type="checkbox" ichecked="ww" id="dynamic"/>  dynamic 
+				<input type="checkbox" ichecked="ww" id="outlines"/> outlines
 				<input type="checkbox" checked="ww" id="shading"/>  shading
 				<input type="checkbox" checked="ww" id="creep"/>    creep
-				<input type="checkbox" ichecked="ww" id="bodyBg"/>  bodyBg
+				<input type="checkbox" checked="ww" id="bodyBg"/>  bodyBg
 			</div>
 			<div>
 				texture:    <select id="images"></select>
 				shading:
 				<select id="method">
-					<option value="0">0</option>
+					<option value="0" selected="hh">0</option>
 					<option value="1">1</option>
-					<option value="2" selected="hh">2</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4">4</option>
 				</select>
 				split
 				<select id="split">
@@ -618,13 +614,14 @@
 				<button id="alphonzo">alphonzo</button>
 			</div>
 			<div>
-				<input id="a0" type="range" min="0" max="1000" step="1"/>
-				<input id="a1" type="range" min="0" max="1000" step="1"/>
-				<input id="a2" type="range" min="0" max="1000" step="1"/>
+				<div>x: <input id="a0" type="range" min="0" max="1000" step="1"/></div>
+				<div>y: <input id="a1" type="range" min="0" max="1000" step="1"/></div>
+				<div>z: <input id="a2" type="range" min="0" max="1000" step="1"/></div>
 			</div>
 			<div id="info">u&lt;3 it!</div>
 		</div>
 
+		<img src="images/comb.jpg"></img>
 		<img src="images/bedrock1.jpg"></img>
 		<img src="images/stone-wall.jpg"></img>
 		<img src="images/water-texture.jpg"></img>
@@ -632,6 +629,11 @@
 		<img src="images/lava-texture.jpg"></img>
 		<img src="images/stars.png"></img>
 		<img src="images/wood.jpg"></img>
+		<img src="images/snake.png"></img>
+		<img src="images/dunes.jpg"></img>
+		<img src="images/scales.jpg"></img>
+		<img src="images/fsm.jpg"></img>
+		<img src="images/anarchy-symbol.png"></img>
 		<img src="images/tsymbol.png"></img>
 	</BODY>
 </HTML>
