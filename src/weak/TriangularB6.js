@@ -9,9 +9,10 @@
  */
 const TriangularB6 = function(canvas) {
     var self = this;
-    self.zFar = 3344;
 
     self.init = function(canvas) {
+		self.zFar = 3344;
+		self.alpha = 255;
 		self.drawCount = 0;
 		self.fillStyle = 'black';
         self.canvas = canvas || document.getElementsByTagName('canvas')[0];
@@ -308,9 +309,8 @@ const TriangularB6 = function(canvas) {
 		self.imageData.data[index + 0 ] = r;
 		self.imageData.data[index + 1 ] = g;
 		self.imageData.data[index + 2 ] = b;
-		self.imageData.data[index + 3 ] = 255;
+		self.imageData.data[index + 3 ] = self.alpha; // so hacky!
     };
-	self.qqq = 0;
 	
     self.newPoint = function() {
 		return self.makePoint(0,0,0, 0,0,0);

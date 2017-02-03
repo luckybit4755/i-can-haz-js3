@@ -9,6 +9,7 @@
 				background-repeat:no-repeat;
 				background-position:-64px -64px;
 				background-size:2048px 2048px;
+				font-size:88%;
             }
 			div {
 				color:#FF9;
@@ -46,7 +47,7 @@
 
         <script src="../../src/util/MatrixMath.js"></script>
         <script src="../../src/util/Point.js"></script>
-        <script src="../../src/weak//Bresenham6d.js"></script>
+        <script src="../../src/weak/Bresenham6d.js"></script>
         <script src="../../src/weak/TriangularB6.js"></script>
 
         <script>
@@ -289,6 +290,8 @@
 				var textures = {};
 				var currentTexture = false;
 
+				var alphonzo = false;
+
 				const rangeHandler = function( id, index ) {
 					control.push( 
 						interaction( 
@@ -319,7 +322,7 @@
 					interaction( 'shading',    function( v ) { useShading = v } );
 					interaction( 'bodyBg',     function( v ) { useBodyBg = v } );
 					interaction( 'creep',      function( v ) { creep = v } );
-				   	interaction( 'alphonzo',  function( v ) { tb6.fillStyle = 'rgba(255,128,92,0.07)' }, true );
+				   	interaction( 'alphonzo',  function( v ) { alphonzo = !alphonzo; tb6.fillStyle = 'rgba(255,128,92,0.07)' }, true );
 					interaction( 'method',    function( v ) { tb6.shadingMethod = parseInt( v ) } );
 					interaction( 'pow',       function( v ) { thePow = v * 13; } );
 					//interaction( 'background', function( v ) { tb6.fillStyle = v } );
@@ -375,8 +378,6 @@
 					);
 				};
 				handlers();
-
-				sides = splitSides( makeSides(), 5 );
 
 				// hacky workspace to avoid expensive object creation
 				var edge1 = new Point();
@@ -456,24 +457,27 @@
 				const drawWrapper = function() {
 					var start = new Date().getTime() / 1000.0;
 
-					//void /ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
-					tb6.context.drawImage( 
-						canvas
-						, 0
-						, 0 
-						, tb6.w
-						, tb6.h
-						, -tb6.w * 0.33
-						, -tb6.h * 0.33
-						, tb6.w  * 2
-						, tb6.h  * 2
-					);
-					tb6.context.fillStyle = 'rgba(33,33,33,0.8)';
-					tb6.context.fillRect( 0, 0, tb6.w, tb6.h );
-					var background = tb6.context.getImageData(0, 0, tb6.w, tb6.h);
+					if ( alphonzo ) {
+						tb6.clear();
+					} else {
+						tb6.context.drawImage( 
+							canvas
+							, 0
+							, 0 
+							, tb6.w
+							, tb6.h
+							, -tb6.w * 0.33
+							, -tb6.h * 0.33
+							, tb6.w  * 2
+							, tb6.h  * 2
+						);
+						tb6.context.fillStyle = 'rgba(33,33,33,0.8)';
+						tb6.context.fillRect( 0, 0, tb6.w, tb6.h );
+						var background = tb6.context.getImageData(0, 0, tb6.w, tb6.h);
 
-					tb6.clear();
-					tb6.imageData = background;
+						tb6.clear();
+						tb6.imageData = background;
+					}
 
 					var rotations = MatrixMath.makeRotations( angles[ 0 ], angles[ 1 ], angles[ 2 ] );
 
@@ -522,8 +526,7 @@
 
 					if ( useDynamicTextures  ) { 
 						if ( useDynamicTextures ) {
-							var imageData = tb6.context.getImageData( 0, 0, w, h );
-							tb6.setTexture( imageData.data, w, h );
+							tb6.setTexture( tb6.context.getImageData( 0, 0, w, h ) )
 						}
 					} 
 
@@ -551,7 +554,7 @@
 
 						info.innerHTML = ( ''
 							+ ktps + ' kila-triangles per second ('
-							+ ktpz + ' wallclock)'
+							+ ktpz + ' by wallclock)'
 							+ '<br/>'
 							+ trz + ' triangles in ' + secz + ' seconds drawing ; ' 
 							+ overall + ' seconds total<br/>efficiency: '
@@ -578,38 +581,39 @@
 		<div class="dark">
 			<div>
 				<input type="checkbox" checked="ww" id="texture"/>  texture
-				<input type="checkbox" ichecked="ww" id="dynamic"/>  dynamic 
-				<input type="checkbox" ichecked="ww" id="outlines"/> outlines
+				<input type="checkbox" checked="ww" id="dynamic"/>  dynamic 
+				<input type="checkbox" checked="ww" id="outlines"/> outlines
 				<input type="checkbox" checked="ww" id="shading"/>  shading
 				<input type="checkbox" checked="ww" id="creep"/>    creep
 				<input type="checkbox" checked="ww" id="bodyBg"/>  bodyBg
 			</div>
 			<div>
-				texture:    <select id="images"></select>
-				shading:
+				shading method:
 				<select id="method">
-					<option value="0" selected="hh">0</option>
+					<option value="0" iselected="hh">0</option>
 					<option value="1">1</option>
-					<option value="2">2</option>
+					<option value="2" selected="hh">2</option>
 					<option value="3">3</option>
 					<option value="4">4</option>
 				</select>
-				split
+				polygon resolution:
 				<select id="split">
 					<option value="0">0</option>
 					<option value="1">1</option>
 					<option value="2">2</option>
-					<option value="3">3</option>
+					<option value="3" iselected="ww">3</option>
 					<option value="4" selected="sigh">4</option>
 					<option value="5">5</option>
 					<option value="6">6</option>
 					<option value="7">7</option>
 					<option value="8">8</option>
 				</select>
-				pow:
-				<input id="pow" type="range" min="0" max="64" step="1" value="4.5"/>
 			</div>
 			<div>
+				texture:    
+				<select id="images"></select>
+				pow:
+				<input id="pow" type="range" min="0" max="64" step="1" value="32"/>
 				<button id="timer">reset timer</button>
 				<button id="alphonzo">alphonzo</button>
 			</div>
@@ -621,9 +625,9 @@
 			<div id="info">u&lt;3 it!</div>
 		</div>
 
+		<img src="images/stone-wall.jpg"></img>
 		<img src="images/comb.jpg"></img>
 		<img src="images/bedrock1.jpg"></img>
-		<img src="images/stone-wall.jpg"></img>
 		<img src="images/water-texture.jpg"></img>
 		<img src="images/grass-texture.jpg"></img>
 		<img src="images/lava-texture.jpg"></img>
