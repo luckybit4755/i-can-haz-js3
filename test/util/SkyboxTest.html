@@ -7,7 +7,10 @@
 				font-family: Comic Sans MS, sans;
 			}
 			input[type="range"] {
-				width:498px;
+				width:438px;
+			}
+			img {
+				display:none;
 			}
 		</style>
 
@@ -29,8 +32,19 @@
 			window.onload = function() {
                 const canvas = document.getElementsByTagName( 'canvas' )[ 0 ];
                 const tb6 = new TriangularB6( canvas );
-
 				const info = document.getElementById( 'info' );
+
+                const image = document.getElementsByTagName( 'img' )[ 0 ];
+				tb6.context.drawImage( image, 0, 0 );
+				tb6.context.fillStyle = 'red';
+				for ( var i = 0 ; i < 13 ; i++ ) {
+					tb6.context.fillText( 'This is a test', 13, i * 13 );
+				}
+				tb6.context.fillStyle = 'blue';
+				for ( var i = 0 ; i < 13 ; i++ ) {
+					tb6.context.fillText( 'Can you dig it?', 160, 256- i * 13 );
+				}
+				tb6.setTexture( tb6.context.getImageData( 0, 0, 256, 256 ) );
 
 				var scale = 1;
 				const scaleRange = document.getElementById( 'scale' );
@@ -53,21 +67,45 @@
                 var iteration = 0;
                 var angles = [0,0,0];
                 var which = 0;
-                const angle_increment = 0.08;
+                const angle_increment = 0.02;
+
+				const anglesSelect = document.getElementById( 'angles' );
+				anglesSelect.onclick = anglesSelect.onchange = anglesSelect.oninput = function() {
+					var value = anglesSelect.options[ anglesSelect.selectedIndex ].value.split( ',' );
+					var tmp = [];
+					for ( var i = 0 ; i < value.length ; i++ ) {
+						tmp.push( parseFloat( value[ i ] ) );
+					}
+					angles = tmp;
+					paused = true;
+				};
+				anglesSelect.click();
+
+				var paused = false
+				canvas.onclick = function() {
+					paused = !paused;
+					console.log('angles=['+ angles.join(',')+'];') 
+				}
 
 				var draw = function() {
 					tb6.clear();
+					
+					if ( !paused ) {
+						angles[ which % 3 ] += angle_increment;
+						if ( 0 == iteration++ % 33 ) which++;
+					}
 
-					angles[ which % 3 ] += angle_increment;
-					if ( 0 == iteration++ % 33 ) which++;
-
+if ( false ) {
+				}
                     var rotations = MatrixMath.makeRotations( angles[ 0 ], angles[ 1 ], angles[ 2 ] );
 
 					var tmp = MatrixMath.multiply( rotations, MatrixMath.scale( scale, scale, scale ) );
 					rotations = tmp;
 
-					var count = skyBox.display( tb6, rotations, threshold );
-					info.innerHTML = 'using ' + count + ' with threshold:' + threshold + ' and scale:' + scale;
+					var vvv = skyBox.display( tb6, rotations, threshold );
+					var count = Math.floor( vvv );
+					var mults = Math.floor( ( vvv - count ) * 100000 );
+					info.innerHTML = 'using ' + count + ' polygons and ' + mults + ' multiplications with threshold:' + threshold + ' and scale:' + scale;
 
 					tb6.flush();
 
@@ -90,5 +128,32 @@
 			<input id="threshold" type="range" value="64" min="0" max="256" step="1"></input>
 			threshold
 		</div>
+		<div>
+			pick an angle:
+			<select id="angles">
+				<option value="0,0,0">front</option>
+				<option value="0,3,0">back</option>
+				<option value="10,0,0">bottom</option>
+				<option value="1.5,0,0">top</option>
+				<option value="0,4.8,0">left</option>
+				<option value="0,1.5,0">right</option>
+			</select>
+		</div>
+		<div>
+			<p>
+				This demonstrates the level of detail (LOD) feature.
+				More polygons are used when the object occupies more screen 
+				real estate and fewer when it is smaller. 
+			</p>
+			<p>
+				The scale changes the overall size and the threshold controls the cutoff
+				which determines if a given surface is shown or if additional subsurfaces are needed.
+			</p>
+
+			<p>
+				Note: click and unclick canvas to pause
+			</p>
+		</div>
+		<img src="images/checkers.jpg"/>
 	</BODY>
 </HTML>

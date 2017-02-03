@@ -12,6 +12,11 @@ const FacePoint = function( vertexIndex, s, t ) {
 		this.t = a.t + ( b.t - a.t ) * 0.5;
 		return this;
 	}
+
+	this.toString = function() {
+		var self = this;
+		return JSON.stringify( {vertexIndex:self.vertexIndex,s:self.s,t:self.t} );
+	};
 };
 
 const Face = function( textureIndex, facePoints ) {
@@ -91,7 +96,7 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 		if ( d1 > d2 && d1 > d3 ) {
 			// edge1 is longest
 			var middleIndex = this.middle( point2, point1, vertices, lookup );
-			var m = new FacePoint( middleIndex, 0, 0 ).tween( point2, point1 );
+			var m = new FacePoint( middleIndex, 0, 0 ).tween( f2, f1 );
 			this.children = [
 				  new Face( ti, [ m, f3, f1 ] )
 				, new Face( ti, [ m, f2, f3 ] )
@@ -100,7 +105,7 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 			if ( d2 > d3 ) {
 				// edge2 is longest
 				var middleIndex = this.middle( point3, point2, vertices, lookup, true );
-				var m = new FacePoint( middleIndex, 0, 0 ).tween( point3, point2 );
+				var m = new FacePoint( middleIndex, 0, 0 ).tween( f3, f2 );
 				this.children = [
 					  new Face( ti, [ m, f3, f1 ] )
 					, new Face( ti, [ m, f1, f2 ] )
@@ -108,7 +113,7 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 			} else {
 				// edge3 is longest
 				var middleIndex = this.middle( point1, point3, vertices, lookup );
-				var m = new FacePoint( middleIndex, 0, 0 ).tween( point1, point3 );
+				var m = new FacePoint( middleIndex, 0, 0 ).tween( f1, f3 );
 				this.children = [
 					  new Face( ti, [ m, f1, f2 ] )
 					, new Face( ti, [ m, f2, f3 ] )
@@ -189,16 +194,14 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 		if ( transformedNormal.value[2][0] < 0 ) return 0;
 
 		var texture = textures ? textures[ this.textureIndex ] : false;
+
 		var index1 = this.facePoints[ 0 ].vertexIndex;
 		var index2 = this.facePoints[ 1 ].vertexIndex;
 		var index3 = this.facePoints[ 2 ].vertexIndex;
 
-		//var point1 = vertices[ index1 ];
-		//var point2 = vertices[ index2 ];
-		//var point3 = vertices[ index3 ];
-		var point1 = this.getModified( matrix, original, vertices, transformed, index1 ); //vertices[ index1 ];
-		var point2 = this.getModified( matrix, original, vertices, transformed, index2 ); //vertices[ index2 ];
-		var point3 = this.getModified( matrix, original, vertices, transformed, index3 ); //vertices[ index3 ];
+		var point1 = this.getModified( matrix, original, vertices, transformed, index1 );
+		var point2 = this.getModified( matrix, original, vertices, transformed, index2 );
+		var point3 = this.getModified( matrix, original, vertices, transformed, index3 );
 		
 		this.facePoints[ 0 ].vertex = point1;
 		this.facePoints[ 1 ].vertex = point2;
@@ -211,13 +214,6 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 				+ ' pt3:' + point3 
 			)
 		}
-/*
-		console.log( 'f1:' + this.facePoints[ 0 ] );
-		console.log( 'f2:' + this.facePoints[ 0 ].vertex );
-		console.log( 'fo:' + JSON.stringify( this.facePoints[ 0 ].vertex ) );
-		console.log( 'f3:' + this.facePoints[ 0 ].value );
-*/
-	transformedNormal.value [ 2 ][ 0 ] = 1;
 
 		tb6.jack(
 			  this.facePoints[ 0 ]
@@ -267,23 +263,23 @@ SkyBox.prototype = {
 		];
 
 		this.faces = [
-			  new Face( this.BACK, [ new FacePoint( 3, 0, 0 ), new FacePoint( 0, 0, 0 ), new FacePoint( 1, 0, 0 ) ] )
-			, new Face( this.BACK, [ new FacePoint( 3, 0, 0 ), new FacePoint( 1, 0, 0 ), new FacePoint( 2, 0, 0 ) ] )
+			  new Face( this.BACK, [ new FacePoint( 4, 0, 1 ), new FacePoint( 6, 1, 0 ), new FacePoint( 7, 0, 0 ) ] )
+			, new Face( this.BACK, [ new FacePoint( 4, 0, 1 ), new FacePoint( 5, 1, 1 ), new FacePoint( 6, 1, 0 ) ] )
 
-			, new Face( this.FRONT, [ new FacePoint( 4, 0, 0 ), new FacePoint( 6, 0, 0 ), new FacePoint( 7, 0, 0 ) ] )
-			, new Face( this.FRONT, [ new FacePoint( 4, 0, 0 ), new FacePoint( 5, 0, 0 ), new FacePoint( 6, 0, 0 ) ] )
+			, new Face( this.FRONT, [ new FacePoint( 3, 0, 0 ), new FacePoint( 0, 0, 1 ), new FacePoint( 1, 1, 1 ) ] )
+			, new Face( this.FRONT, [ new FacePoint( 3, 0, 0 ), new FacePoint( 1, 1, 1 ), new FacePoint( 2, 1, 0 ) ] )
 
-			, new Face( this.TOP, [ new FacePoint( 7, 0, 0 ), new FacePoint( 1, 0, 0 ), new FacePoint( 0, 0, 0 ) ] )
-			, new Face( this.TOP, [ new FacePoint( 7, 0, 0 ), new FacePoint( 6, 0, 0 ), new FacePoint( 1, 0, 0 ) ] )
+			, new Face( this.BOTTOM, [ new FacePoint( 7, 0, 1 ), new FacePoint( 1, 1, 0 ), new FacePoint( 0, 0, 0 ) ] )
+			, new Face( this.BOTTOM, [ new FacePoint( 7, 0, 1 ), new FacePoint( 6, 1, 1 ), new FacePoint( 1, 1, 0 ) ] )
 
-			, new Face( this.BOTTOM, [ new FacePoint( 4, 0, 0 ), new FacePoint( 3, 0, 0 ), new FacePoint( 2, 0, 0 ) ] )
-			, new Face( this.BOTTOM, [ new FacePoint( 4, 0, 0 ), new FacePoint( 2, 0, 0 ), new FacePoint( 5, 0, 0 ) ] )
+			, new Face( this.TOP, [ new FacePoint( 4, 0, 0 ), new FacePoint( 3, 0, 1 ), new FacePoint( 2, 1, 1 ) ] )
+			, new Face( this.TOP, [ new FacePoint( 4, 0, 0 ), new FacePoint( 2, 1, 1 ), new FacePoint( 5, 1, 0 ) ] )
 
-			, new Face( this.LEFT, [ new FacePoint( 3, 0, 0 ), new FacePoint( 7, 0, 0 ), new FacePoint( 0, 0, 0 ) ] )
-			, new Face( this.LEFT, [ new FacePoint( 3, 0, 0 ), new FacePoint( 4, 0, 0 ), new FacePoint( 7, 0, 0 ) ] )
+			, new Face( this.RIGHT, [ new FacePoint( 2, 0, 0 ), new FacePoint( 1, 0, 1 ), new FacePoint( 6, 1, 1 ) ] )
+			, new Face( this.RIGHT, [ new FacePoint( 2, 0, 0 ), new FacePoint( 6, 1, 1 ), new FacePoint( 5, 1, 0 ) ] )
 
-			, new Face( this.RIGHT, [ new FacePoint( 2, 0, 0 ), new FacePoint( 1, 0, 0 ), new FacePoint( 6, 0, 0 ) ] )
-			, new Face( this.RIGHT, [ new FacePoint( 2, 0, 0 ), new FacePoint( 6, 0, 0 ), new FacePoint( 5, 0, 0 ) ] )
+			, new Face( this.LEFT, [ new FacePoint( 3, 1, 0 ), new FacePoint( 7, 0, 1 ), new FacePoint( 0, 1, 1 ) ] )
+			, new Face( this.LEFT, [ new FacePoint( 3, 1, 0 ), new FacePoint( 4, 0, 0 ), new FacePoint( 7, 0, 1 ) ] )
 		]
 
 		this.split( splits );

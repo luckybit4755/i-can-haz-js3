@@ -92,41 +92,56 @@ const TriangularB6 = function(canvas) {
 		self.right.fill( false );
     };
     
-    self.setTexture = function( pixels, w, h ) {
-        self.texture = pixels;
-        self.textureW =  w;
-        self.textureH = h;
+    self.setTexture = function( imageData ) {
+        self.texture = imageData;
+		self.pixels = imageData ? imageData.data : false;
     };
 
-	self.jack = function( facePoint1, facePoint2, facePoint3, normal, texture ) {
+	self.into = function( v ) {
+		return Math.floor( 256 * v );
+		return v;
+	}
+
+	self.jack = function( facePoint1, facePoint2, facePoint3, normal ) {
 		self.tmpNormal.x = normal.value[ 0 ][ 0 ];
 		self.tmpNormal.y = normal.value[ 1 ][ 0 ];
 		self.tmpNormal.z = normal.value[ 2 ][ 0 ];
 		self.normal = self.tmpNormal;
 		
-		//self.texture = texture;
+		var text_no = !true;
+		
+		var v = ( true
+			&& 0 == self.into( facePoint1.s )
+			&& 0 == self.into( facePoint1.t )
+			&& 0 == self.into( facePoint2.s )
+			&& 0 == self.into( facePoint2.t )
+			&& 0 == self.into( facePoint3.s )
+			&& 0 == self.into( facePoint3.t )
+		) ? 64 : 256;
+
+		if ( 64 == v ) return;
 
 		self.monkey(
 			  self.toScreen( facePoint1.vertex.value[ 0 ][ 0 ] )
 			, self.toScreen( facePoint1.vertex.value[ 1 ][ 0 ] )
-			, facePoint1.vertex.value[ 2 ][ 0 ]
-			, 255 //facePoint1.s
-			, 0 //facePoint1.t
-			, 0 //-1
+			, self.into( facePoint1.vertex.value[ 2 ][ 0 ] )
+			, text_no ? v : self.into( facePoint1.s )
+			, text_no ? 0 : self.into( facePoint1.t )
+			, text_no ? 0 : -1
 
 			, self.toScreen( facePoint2.vertex.value[ 0 ][ 0 ] )
 			, self.toScreen( facePoint2.vertex.value[ 1 ][ 0 ] )
-			, facePoint2.vertex.value[ 2 ][ 0 ]
-			, 0 //facePoint2.s
-			, 255 //facePoint2.t
-			, 0 //-1
+			, self.into( facePoint2.vertex.value[ 2 ][ 0 ] )
+			, text_no ? 0 : self.into( facePoint2.s )
+			, text_no ? v : self.into( facePoint2.t )
+			, text_no ? 0 : -1
 			
 			, self.toScreen( facePoint3.vertex.value[ 0 ][ 0 ] )
 			, self.toScreen( facePoint3.vertex.value[ 1 ][ 0 ] )
-			, facePoint3.vertex.value[ 2 ][ 0 ]
-			, 0 //facePoint3.s
-			, 0 //facePoint3.t
-			, 255 //-1
+			, self.into( facePoint3.vertex.value[ 2 ][ 0 ] )
+			, text_no ? 0 : self.into( facePoint3.s )
+			, text_no ? 0 : self.into( facePoint3.t )
+			, text_no ? v : -1
 		);
 	};
 
@@ -144,6 +159,8 @@ const TriangularB6 = function(canvas) {
 	self.monkey = function( x1, y1, z1, r1, g1, b1,	x2, y2, z2, r2, g2, b2,	x3, y3, z3, r3, g3, b3 ) {
         var minY = Math.min(y1, Math.min(y2, y3));
         var maxY = Math.max(y1, Math.max(y2, y3)) + 1;
+
+		//console.log( JSON.stringify( { x1:x1,y1:y1,z1:z1,r1:r1,g1:g1,b1:b1,x2:x2,y2:y2,z2:z2,r2:r2,g2:g2,b2:b2,x3:x3,y3:y3,z3:z3,r3:r3,g3:g3,b3:b3 }));
 
         if (minY < 0) minY = 0;
         if (maxY >= self.h) maxY = self.h;
@@ -198,30 +215,34 @@ const TriangularB6 = function(canvas) {
             self.right[y] = self.setPoint( self.rightPoint[ y ], x+1, y, z, r, g, b);
         }
     };
-
+	
     self.zput = function( x, y, z, r, g, b ) {
         if ( y < 0 || x < 0 || y >= self.h || x >= self.w ) return; 
 	 
 	   	// should already be integers....	
 		//x = Math.floor( x );
 		//y = Math.floor( y );
-					
+
         if ( z > self.zbuffer[ y ][ x ]) return;
 
 		self.zbuffer[ y ][ x ] = z;
 		var index = ( x + y * self.w ) << 2;
-		
+
 		/* texture hack for the win! */
 		if ( -1 == b && self.texture ) {
-			var s = ( r % 256 ) / 256 * self.textureW;
-			var t = ( g % 256 ) / 256 * self.textureW;
-			if ( s < 0 ) s += self.textureW;
-			if ( t < 0 ) t += self.textureH;
+			var w = self.texture.width;
+			var h = self.texture.height;
 
-			var textureIndex = ( s + t * self.textureW ) << 2;
-			r = self.texture[ textureIndex + 0 ];
-			g = self.texture[ textureIndex + 1 ];
-			b = self.texture[ textureIndex + 2 ];
+			var s = ( r % 256 ) / 256 * w;
+			var t = ( g % 256 ) / 256 * h;
+
+			if ( s < 0 ) s += w;
+			if ( t < 0 ) t += h;
+
+			var textureIndex = ( s + t * w ) << 2;
+			r = self.pixels[ textureIndex + 0 ];
+			g = self.pixels[ textureIndex + 1 ];
+			b = self.pixels[ textureIndex + 2 ];
 		}
 
 		if ( self.normal ) {
