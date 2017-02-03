@@ -130,7 +130,11 @@ if ( false ) {
 					var vvv = skyBox.display( tb6, rotations, threshold );
 					var count = Math.floor( vvv );
 					var mults = Math.floor( ( vvv - count ) * 100000 );
-					info.innerHTML = 'using ' + count + ' polygons and ' + mults + ' multiplications with threshold:' + threshold + ' and scale:' + scale;
+					info.innerHTML = ( ''
+						+ 'using ' + count + ' polygons and ' + mults + ' multiplications' 
+						+ ' drew ' + tb6.drawCount + ' polygons'
+					   	+ '<br/>with threshold:' + threshold + ' and scale:' + scale
+					);
 
 					tb6.flush();
 
@@ -150,7 +154,7 @@ if ( false ) {
 			scale
 		</div>
 		<div>
-			<input id="threshold" type="range" value="64" min="0" max="256" step="1"></input>
+			<input id="threshold" type="range" value="8" min="0" max="256" step="1"></input>
 			threshold
 		</div>
 		<div>
