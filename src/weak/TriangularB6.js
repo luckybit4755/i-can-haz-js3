@@ -12,6 +12,7 @@ const TriangularB6 = function(canvas) {
     self.zFar = 3344;
 
     self.init = function(canvas) {
+		self.drawCount = 0;
 		self.fillStyle = 'black';
         self.canvas = canvas || document.getElementsByTagName('canvas')[0];
         self.context = self.canvas.getContext('2d');
@@ -59,6 +60,7 @@ const TriangularB6 = function(canvas) {
 	};
 
     self.clear = function() {
+		self.drawCount = 0;
         self.clearPixels();
         self.clearScanlines();
         self.clearZbuffer();
@@ -163,6 +165,13 @@ const TriangularB6 = function(canvas) {
     };
 
 	self.monkey = function( x1, y1, z1, r1, g1, b1,	x2, y2, z2, r2, g2, b2,	x3, y3, z3, r3, g3, b3 ) {
+		if ( x1 < 0 && x2 < 0 && x3 < 0 ) return;
+		if ( y1 < 0 && y2 < 0 && y3 < 0 ) return;
+		if ( x1 >= self.w && x2 >= self.w && x3 >= self.w ) return;
+		if ( y1 >= self.h && y2 >= self.h && y3 >= self.h ) return;
+
+		self.drawCount++;
+
         var minY = Math.min(y1, Math.min(y2, y3));
         var maxY = Math.max(y1, Math.max(y2, y3)) + 1;
 
