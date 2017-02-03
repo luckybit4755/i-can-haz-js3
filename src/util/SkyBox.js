@@ -1,5 +1,5 @@
-const SkyBox = function( splits ) {
-	this.init( splits ? splits : 4 );
+const SkyBox = function( splits, textures ) {
+	this.init( splits ? splits : 4, textures );
 };
 
 const FacePoint = function( vertexIndex, s, t ) {
@@ -213,7 +213,7 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 				+ ' pt2:' + point2 
 				+ ' pt3:' + point3 
 			)
-		}
+			}
 
 		tb6.jack(
 			  this.facePoints[ 0 ]
@@ -243,9 +243,13 @@ SkyBox.prototype = {
 	, LEFT:   4
 	, RIGHT:  5
 
-	, init: function( splits ) {
-		this.textures = [];
-		for ( var i = 0 ; i <= this.RIGHT; i++ ) this.textures.push( false );
+	, init: function( splits, textures ) {
+		if ( textures ) {
+			this.textures = textures;
+		} else {
+			this.textures = [];
+			for ( var i = 0 ; i <= this.RIGHT; i++ ) this.textures.push( false );
+		}
 
 		var x = Math.sqrt( 1 / 3 );
 		var y = x;
@@ -321,15 +325,22 @@ SkyBox.prototype = {
 	}
 
 	, display: function( tb6, matrix, threshold ) {
-		tb6.outline = 'snit';
-		tb6.fillStyle = 'gray';
-
 		this.hasBeenModified.fill( false );
 		var count = 0;
 
 		for ( var i = 0 ; i < this.faces.length ; i++ ) {
 			var face = this.faces[ i ];
-			count += face.display( tb6, matrix, this.vertices, this.modifiedPoints, this.hasBeenModified, this.modifiedNormal, threshold, this.textures, this.sizePoint );
+			count += face.display( 
+				tb6
+				, matrix
+				, this.vertices
+				, this.modifiedPoints
+				, this.hasBeenModified
+				, this.modifiedNormal
+				, threshold
+				, this.textures
+				, this.sizePoint 
+			);
 		}
 
 		var k2 = 0;

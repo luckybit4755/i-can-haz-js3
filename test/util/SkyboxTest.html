@@ -29,22 +29,47 @@
 				);
 			};
 
+			const makeTextures = function( context, image ) {
+				var textures = [];
+
+				var sides = "BACK TOP FRONT BOTTOM LEFT RIGHT".split( ' ' );
+				for ( var s = 0 ; s < sides.length ; s++ ) {
+					context.drawImage( image, 0, 0 );
+
+					context.font = "14px Arial";
+					
+					context.fillStyle = 'red';
+					for ( var i = 0 ; i < 13 ; i++ ) {
+						context.fillText( 'This is a test', 13, i * 13 );
+					}
+
+					context.fillStyle = 'blue';
+					for ( var i = 0 ; i < 13 ; i++ ) {
+						context.fillText( 'Can you dig it?', 160, 256- i * 13 );
+					}
+
+					context.font = "32px Arial";
+					context.fillStyle = 'green';
+					context.fillText( sides[ s ] + ' SIDE', 64, 128 );
+
+					textures.push( context.getImageData( 0, 0, 256, 256 ) );
+				}
+				return textures;
+			};
+
 			window.onload = function() {
                 const canvas = document.getElementsByTagName( 'canvas' )[ 0 ];
                 const tb6 = new TriangularB6( canvas );
+
+				tb6.outline = true;
+
 				const info = document.getElementById( 'info' );
 
                 const image = document.getElementsByTagName( 'img' )[ 0 ];
-				tb6.context.drawImage( image, 0, 0 );
-				tb6.context.fillStyle = 'red';
-				for ( var i = 0 ; i < 13 ; i++ ) {
-					tb6.context.fillText( 'This is a test', 13, i * 13 );
-				}
-				tb6.context.fillStyle = 'blue';
-				for ( var i = 0 ; i < 13 ; i++ ) {
-					tb6.context.fillText( 'Can you dig it?', 160, 256- i * 13 );
-				}
-				tb6.setTexture( tb6.context.getImageData( 0, 0, 256, 256 ) );
+				const textures = makeTextures( tb6.context, image );
+				tb6.setTexture( textures[ 0 ] );
+
+				tb6.fillStyle = image;
 
 				var scale = 1;
 				const scaleRange = document.getElementById( 'scale' );
@@ -62,7 +87,7 @@
 
                 MatrixMath.init();
 				
-				var skyBox = new SkyBox( 7 );
+				var skyBox = new SkyBox( 7, textures );
 
                 var iteration = 0;
                 var angles = [0,0,0];

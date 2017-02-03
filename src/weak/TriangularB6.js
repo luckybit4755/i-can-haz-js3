@@ -65,8 +65,13 @@ const TriangularB6 = function(canvas) {
     };
 
     self.clearPixels = function() {
-		self.context.fillStyle = self.fillStyle;
-		self.context.fillRect(0, 0, self.w, self.h);
+		if ( self.fillStyle instanceof HTMLImageElement ) {
+			var image = self.fillStyle;
+			self.context.drawImage( image, 0, 0, image.width, image.height, 0, 0, self.w, self.h );
+		} else {
+			self.context.fillStyle = self.fillStyle;
+			self.context.fillRect(0, 0, self.w, self.h);
+		}
 		self.imageData = self.context.getImageData(0, 0, self.w, self.h);
     };
 
@@ -102,11 +107,12 @@ const TriangularB6 = function(canvas) {
 		return v;
 	}
 
-	self.jack = function( facePoint1, facePoint2, facePoint3, normal ) {
+	self.jack = function( facePoint1, facePoint2, facePoint3, normal, texture ) {
 		self.tmpNormal.x = normal.value[ 0 ][ 0 ];
 		self.tmpNormal.y = normal.value[ 1 ][ 0 ];
 		self.tmpNormal.z = normal.value[ 2 ][ 0 ];
 		self.normal = self.tmpNormal;
+		self.setTexture( texture );
 		
 		var text_no = !true;
 		
