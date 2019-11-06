@@ -1,3 +1,9 @@
+/* nasty trick to make it work in node and browser */
+try {
+	bresenham6d =  require( './Bresenham6d' );
+} catch(e){}
+
+
 /**
  *
  * Simple rendering engine for triangles that use a zbuffer, 6d implementation
@@ -68,10 +74,16 @@ const TriangularB6 = function(canvas) {
     };
 
     self.clearPixels = function() {
-		if ( self.fillStyle instanceof HTMLImageElement ) {
-			var image = self.fillStyle;
-			self.context.drawImage( image, 0, 0, image.width, image.height, 0, 0, self.w, self.h );
-		} else {
+		let ok = false;
+		try {
+			if ( self.fillStyle instanceof HTMLImageElement ) {
+				var image = self.fillStyle;
+				self.context.drawImage( image, 0, 0, image.width, image.height, 0, 0, self.w, self.h );
+				ok = false;
+			}
+		} catch( e ) {
+		}
+		if ( !ok ) {
 			self.context.fillStyle = self.fillStyle;
 			self.context.fillRect(0, 0, self.w, self.h);
 		}
@@ -106,7 +118,7 @@ const TriangularB6 = function(canvas) {
     };
 
 	self.into = function( v ) {
-		return Math.floor( 256 * v );
+		return Math.floor( 255 * v );
 		return v;
 	}
 
@@ -116,7 +128,7 @@ const TriangularB6 = function(canvas) {
 		self.tmpNormal.z = normal.value[ 2 ][ 0 ];
 		self.normal = self.tmpNormal;
 		self.setTexture( texture );
-		
+
 		var text_no = !true;
 		
 		var v = ( true
@@ -136,21 +148,21 @@ const TriangularB6 = function(canvas) {
 			, self.into( facePoint1.vertex.value[ 2 ][ 0 ] )
 			, text_no ? v : self.into( facePoint1.s )
 			, text_no ? 0 : self.into( facePoint1.t )
-			, text_no ? 0 : -1
+			, text_no ? 0 : facePoint1.normal.value[ 2 ][ 0 ] * 256
 
 			, self.toScreen( facePoint2.vertex.value[ 0 ][ 0 ] )
 			, self.toScreen( facePoint2.vertex.value[ 1 ][ 0 ] )
 			, self.into( facePoint2.vertex.value[ 2 ][ 0 ] )
 			, text_no ? 0 : self.into( facePoint2.s )
 			, text_no ? v : self.into( facePoint2.t )
-			, text_no ? 0 : -1
+			, text_no ? 0 : facePoint2.normal.value[ 2 ][ 0 ] * 256
 			
 			, self.toScreen( facePoint3.vertex.value[ 0 ][ 0 ] )
 			, self.toScreen( facePoint3.vertex.value[ 1 ][ 0 ] )
 			, self.into( facePoint3.vertex.value[ 2 ][ 0 ] )
 			, text_no ? 0 : self.into( facePoint3.s )
 			, text_no ? 0 : self.into( facePoint3.t )
-			, text_no ? v : -1
+			, text_no ? v : facePoint3.normal.value[ 2 ][ 0 ] * 256
 		);
 	};
 
@@ -170,6 +182,25 @@ const TriangularB6 = function(canvas) {
 		if ( y1 < 0 && y2 < 0 && y3 < 0 ) return;
 		if ( x1 >= self.w && x2 >= self.w && x3 >= self.w ) return;
 		if ( y1 >= self.h && y2 >= self.h && y3 >= self.h ) return;
+
+x1 = Math.floor( x1 );
+y1 = Math.floor( y1 );
+z1 = Math.floor( z1 );
+r1 = Math.floor( r1 );
+g1 = Math.floor( g1 );
+b1 = Math.floor( b1 );
+x2 = Math.floor( x2 );
+y2 = Math.floor( y2 );
+z2 = Math.floor( z2 );
+r2 = Math.floor( r2 );
+g2 = Math.floor( g2 );
+b2 = Math.floor( b2 );
+x3 = Math.floor( x3 );
+y3 = Math.floor( y3 );
+z3 = Math.floor( z3 );
+r3 = Math.floor( r3 );
+g3 = Math.floor( g3 );
+b3 = Math.floor( b3 );
 
 		self.drawCount++;
 
@@ -206,8 +237,8 @@ const TriangularB6 = function(canvas) {
             var ptR = self.right[y];
 
             bresenham6d(
-                ptL.x, ptL.y, ptL.z, ptL.r, ptL.g, ptL.b,
-                ptR.x, ptR.y, ptR.z, ptR.r, ptR.g, ptR.b,
+                ptL.x, y, ptL.z, ptL.r, ptL.g, ptL.b,
+                ptR.x, y, ptR.z, ptR.r, ptR.g, ptR.b,
                 self.zput
             )
         };
@@ -244,8 +275,10 @@ const TriangularB6 = function(canvas) {
 		self.zbuffer[ y ][ x ] = z;
 		var index = ( x + y * self.w ) << 2;
 
+		var originalB = b;
+
 		/* texture hack for the win! */
-		if ( -1 == b && self.texture ) {
+		if ( /*-1 == b && */ self.texture ) {
 			var w = self.texture.width;
 			var h = self.texture.height;
 
@@ -262,17 +295,19 @@ const TriangularB6 = function(canvas) {
 		}
 
 		if ( self.normal ) {
+			var zed = self.useZed ? ( 0 + originalB ) / 256 : self.normal.z;
+
 			switch ( self.shadingMethod ) {
 				case 1:
 					// subtract based on the orientation
-					var q = ( self.shadingSubtractValue * self.normal.z ) - self.shadingSubtractValue;
+					var q = ( self.shadingSubtractValue * zed ) - self.shadingSubtractValue;
 					r += q;
 					g += q;
 					b += q;
 					break;
 				case 2:
 					// shift based on the orientation
-					var q = self.shadingShiftValue - ( ( 1 + self.shadingShiftValue ) * self.normal.z );
+					var q = self.shadingShiftValue - ( ( 1 + self.shadingShiftValue ) * zed );
 					r = r >> q; g = g >> q; b = b >> q;
 					break;
 				case 3:
@@ -280,7 +315,7 @@ const TriangularB6 = function(canvas) {
 					// larger multiplier increment means fewer bands;
 					var multiplier = 1.2;
 					var q = 1;
-					for ( q = 0.2 ; q < self.normal.z ; q *= multiplier );
+					for ( q = 0.2 ; q < zed ; q *= multiplier );
 					r *= q;
 					g *= q;
 					b *= q;
@@ -292,14 +327,14 @@ const TriangularB6 = function(canvas) {
 						var zd = self.light.z - z;
 						var d2 = xd * xd + yd * yd + zd * zd;
 						d2 = d2 / self.light.power
-						r = r * 0.1 + 0.9 * r / d2 * self.normal.z;
-						g = r * 0.1 + 0.9 * g / d2 * self.normal.z;
-						b = r * 0.1 + 0.9 * b / d2 * self.normal.z;
+						r = r * 0.1 + 0.9 * r / d2 * zed;
+						g = r * 0.1 + 0.9 * g / d2 * zed;
+						b = r * 0.1 + 0.9 * b / d2 * zed;
 						break;
 					}
 				default:
 					// based on the orientation
-					var q = 0.2 + self.normal.z * 0.8;
+					var q = zed * zed; //0.2 + zed * 0.8;
 					r *= q;
 					g *= q;
 					b *= q;
@@ -329,3 +364,9 @@ const TriangularB6 = function(canvas) {
 
     self.init(canvas);
 };
+
+/* nasty trick to make it work in node and browser */
+try {
+    exports.TriangularB6 = TriangularB6;
+    module.exports = TriangularB6;
+} catch(e){}

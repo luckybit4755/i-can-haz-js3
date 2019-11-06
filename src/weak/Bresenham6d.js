@@ -18,3 +18,8 @@ const bresenham6d_min = function(a, f, o, i, r, s, t, b, h, n, M, c, e) {
 const bresenham6d = function(Old1, Old2, Old3, Old4, Old5, Old6, New1, New2, New3, New4, New5, New6, callback) {
     bresenham6d_min(Old1, Old2, Old3, Old4, Old5, Old6, New1, New2, New3, New4, New5, New6, callback);
 };
+
+try {
+    exports.bresenham6d = bresenham6d;
+    module.exports = bresenham6d;
+} catch(e){}
