@@ -14,8 +14,8 @@ const TriangularB6Test = function() {
 		return { value:[ [x],[y],[z] ] };
 	};
 
-	self.point = function( s, t, x, y, z, nx, ny, nz ) {
-		return { s:s, t:t, vertex:self.vertex( x, y, z ), normal:self.vertex(nx,ny,nz) };
+	self.point = function( s, t, x, y, z ) {
+		return { s:s, t:t, vertex:self.vertex( x, y, z ) };
 	};
 
 	self.main = function( args ) {
@@ -23,25 +23,66 @@ const TriangularB6Test = function() {
 		let tb6 = new TriangularB6( canvas );
 		tb6.clear();
 
-		let normal = self.vertex( 1, 1, 1 ); // I know...
-
-/*
-		let point1 = { s:0, t:0, vertex:self.vertex( -1, 0, +1 ), normal:normal };
-		let point2 = { s:1, t:0, vertex:self.vertex( +1, 0, +1 ), normal:normal };
-		let point3 = { s:0, t:1, vertex:self.vertex(  0, 0, -1 ), normal:normal };
-
-
-*/
-		let point1 = self.point( 0, 0,   -1, 0, +1,     1,1,1 );
-		let point2 = self.point( 1, 0,   +1, 0, +1,     1,1,1 );
-		let point3 = self.point( 0, 1,    0, 0, -1,     1,1,1 );
+		let q = -0.1;
+		let point1 = self.point( 0, 0,   -1, 0, +1 );
+		let point2 = self.point( 1, 0,   +1, 0, +1 );
+		let point3 = self.point( 0, 1,    0, q, -1 );
 
 		let texture = self.makeTexture( canvas );
 
-		tb6.jack( point1, point2, point3, normal, texture );
+		self.triangle( tb6, texture, point1, point2, point3 );
 
 		canvas.saveToJpg( jpeg, 'tb6.jpg' );
 		console.log( 'ok' );
+	};
+
+	self.triangle = function( tb6, texture, point1, point2, point3 ) {
+		let normal = self.xyzzy(  point1, point2, point3 );
+		if ( normal.value[ 2 ][ 0 ] < 0 ) return;
+
+		// brighten things up a bit...
+		if ( !false ) {
+			normal.value[ 0 ][ 0 ] = Math.pow( normal.value[ 0 ][ 0 ], 0.2 );
+			normal.value[ 1 ][ 0 ] = Math.pow( normal.value[ 1 ][ 0 ], 0.2 );
+			normal.value[ 2 ][ 0 ] = Math.pow( normal.value[ 2 ][ 0 ], 0.2 );
+		}
+		
+		point1.normal = point2.normal = point3.normal = normal;
+		
+		tb6.jack( point1, point2, point3, normal, texture );
+	};
+
+	self.xyzzy = function( point1, point2, point3 ) {
+		let x = 0;
+		let y = 1;
+		let z = 2;
+		let a = self.normallyFrom( point2, point1 );
+		let b = self.normallyFrom( point2, point3 );
+		let crossed = self.normalize(
+			  ( a[y] * b[z] ) - ( a[z] * b[y] )  // x=yzzy
+			, ( a[z] * b[x] ) - ( a[x] * b[z] )  // y=zxxz
+			, ( a[x] * b[y] ) - ( a[y] * b[x] )  // z=xyyx
+		);
+		return self.vertex( crossed[ x ], crossed[ y ], crossed[ z ] );
+	};
+
+	self.normallyFrom = function( start, stop ) {
+		let x = stop.vertex.value[ 0 ][ 0 ] - start.vertex.value[ 0 ][ 0 ];
+		let y = stop.vertex.value[ 1 ][ 0 ] - start.vertex.value[ 1 ][ 0 ];
+		let z = stop.vertex.value[ 2 ][ 0 ] - start.vertex.value[ 2 ][ 0 ];
+		return self.normalize( x, y, z );
+	};
+
+	self.normalize = function( x, y, z ) {
+		let s = ( x * x ) + ( y * y ) + ( z * z );
+		if ( 0 === s ) {
+			s = 1;
+		} else {
+			s = Math.sqrt( s );
+		}
+
+		let normalized = [ x/s, y/s, z/s ];
+		return normalized;
 	};
 
 
