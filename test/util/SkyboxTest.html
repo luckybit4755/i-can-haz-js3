@@ -61,7 +61,8 @@
                 const canvas = document.getElementsByTagName( 'canvas' )[ 0 ];
                 const tb6 = new TriangularB6( canvas );
 
-				tb6.outline = true;
+				tb6.outline = !true;
+				//tb6.shadingMethod = 3;
 
 				const info = document.getElementById( 'info' );
 
@@ -84,10 +85,22 @@
 					threshold = thresholdRange.value;
 				};
 				thresholdRange.click();
+				
+				const zedCheckbox = document.getElementById( 'zed' );
+				zedCheckbox.onclick = zedCheckbox.onchange = function() {
+					tb6.useZed = zedCheckbox.checked;
+				};
+				zedCheckbox.onchange();
+
+				const outlineCheckbox = document.getElementById( 'outline' );
+				outlineCheckbox.onclick = outlineCheckbox.onchange = function() {
+					tb6.outline = outlineCheckbox.checked;
+				};
+				outlineCheckbox.onchange();
 
                 MatrixMath.init();
 				
-				var skyBox = new SkyBox( 7, textures );
+				var skyBox = new SkyBox( 8, textures, true );
 
                 var iteration = 0;
                 var angles = [0,0,0];
@@ -120,11 +133,10 @@
 						if ( 0 == iteration++ % 33 ) which++;
 					}
 
-if ( false ) {
-				}
                     var rotations = MatrixMath.makeRotations( angles[ 0 ], angles[ 1 ], angles[ 2 ] );
 
-					var tmp = MatrixMath.multiply( rotations, MatrixMath.scale( scale, scale, scale ) );
+					var lol = scale ;//+ 1;
+					var tmp = MatrixMath.multiply( rotations, MatrixMath.scale( lol, lol, lol ) );
 					rotations = tmp;
 
 					var vvv = skyBox.display( tb6, rotations, threshold );
@@ -167,6 +179,8 @@ if ( false ) {
 				<option value="0,4.8,0">left</option>
 				<option value="0,1.5,0">right</option>
 			</select>
+			use zed: <input type="checkbox" id="zed" checked="33"/>
+			outline: <input type="checkbox" id="outline" ichecked="44"/>
 		</div>
 		<div>
 			<p>

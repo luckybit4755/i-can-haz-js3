@@ -1,5 +1,5 @@
-const SkyBox = function( splits, textures ) {
-	this.init( splits ? splits : 4, textures );
+const SkyBox = function( splits, textures, flip ) {
+	this.init( splits ? splits : 4, textures, flip );
 };
 
 const FacePoint = function( vertexIndex, s, t ) {
@@ -129,7 +129,7 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 		this.children[ 1 ].split( iterations - 1, vertices, lookup );
 	}
 
-	, calculateNormal: function( vertices, edge1, edge3 ) {
+	, calculateNormal: function( vertices, pointNormals, edge1, edge3 ) {
 		var index1 = this.facePoints[ 0 ].vertexIndex;
 		var index2 = this.facePoints[ 1 ].vertexIndex;
 		var index3 = this.facePoints[ 2 ].vertexIndex;
@@ -142,27 +142,30 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 		edge3.initPoint( point3 ).minus( point2 );
 
 		this.normal = new Point().cross( edge1, edge3 ).normalize();
+		pointNormals[ index1 ].add( this.normal );
+		pointNormals[ index2 ].add( this.normal );
+		pointNormals[ index3 ].add( this.normal );
 
 		if ( this.children ) {
 			for ( var i = 0 ; i < this.children.length ; i++ ) {
-				this.children[ i ].calculateNormal( vertices, edge1, edge3 );
+				this.children[ i ].calculateNormal( vertices, pointNormals, edge1, edge3 );
 			}
 		}
 	}
 
-	, getModified( matrix, original, vertices, transformed, index ) {
-		if ( !transformed[ index ] ) {
-			transformed[ index ] = true;
+	, getModified( matrix, original, transformed, hasBeenTransformed, index ) {
+		if ( !hasBeenTransformed[ index ] ) {
+			hasBeenTransformed[ index ] = true;
 			MatrixMath.mm_4_4_4_1( 
 				matrix
 				, original[ index ].value
-				, vertices[ index ].value
+				, transformed[ index ].value
 			);
 		}
-		return vertices[ index ];
+		return transformed[ index ];
 	}
 
-	, display: function( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures, sizePoint ) {
+	, display: function( tb6, matrix, original, vertices, transformed, transformedNormal, pointNormals, transformedNormalPoints, hasBeenNormalModified, threshold, textures, sizePoint ) {
 		MatrixMath.mm_4_4_4_1( matrix, this.normal.value, transformedNormal.value )
 	
 		var screenArea = 0;
@@ -180,17 +183,17 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 		}
 			
 		if ( screenArea < threshold ) {
-			return this.drawSelf( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures );
+			return this.drawSelf( tb6, matrix, original, vertices, transformed, transformedNormal, pointNormals, transformedNormalPoints, hasBeenNormalModified, threshold, textures );
 		} else {
-			var count = this.drawChildren( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures, sizePoint );
+			var count = this.drawChildren( tb6, matrix, original, vertices, transformed, transformedNormal, pointNormals, transformedNormalPoints, hasBeenNormalModified, threshold, textures, sizePoint );
 			if ( count < 2 ) {
-				count += this.drawSelf( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures );
+				count += this.drawSelf( tb6, matrix, original, vertices, transformed, transformedNormal, pointNormals, transformedNormalPoints, hasBeenNormalModified, threshold, textures );
 			}
 			return count;
 		}
 	}
 
-	, drawSelf: function( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures ) {
+	, drawSelf: function( tb6, matrix, original, vertices, transformed, transformedNormal, pointNormals, transformedNormalPoints, hasBeenNormalModified, threshold, textures ) {
 		if ( transformedNormal.value[2][0] < 0 ) return 0;
 
 		var texture = textures ? textures[ this.textureIndex ] : false;
@@ -202,10 +205,18 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 		var point1 = this.getModified( matrix, original, vertices, transformed, index1 );
 		var point2 = this.getModified( matrix, original, vertices, transformed, index2 );
 		var point3 = this.getModified( matrix, original, vertices, transformed, index3 );
-		
+
+		var normal1 = this.getModified( matrix, pointNormals, transformedNormalPoints, hasBeenNormalModified, index1 );
+		var normal2 = this.getModified( matrix, pointNormals, transformedNormalPoints, hasBeenNormalModified, index2 );
+		var normal3 = this.getModified( matrix, pointNormals, transformedNormalPoints, hasBeenNormalModified, index3 );
+
 		this.facePoints[ 0 ].vertex = point1;
 		this.facePoints[ 1 ].vertex = point2;
 		this.facePoints[ 2 ].vertex = point3;
+
+		this.facePoints[ 0 ].normal = normal1;
+		this.facePoints[ 1 ].normal = normal2;
+		this.facePoints[ 2 ].normal = normal3;
 
 		if ( !point1 || !point2 || !point3 ) {
 			console.log( 'ug'
@@ -213,7 +224,7 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 				+ ' pt2:' + point2 
 				+ ' pt3:' + point3 
 			)
-			}
+		}
 
 		tb6.jack(
 			  this.facePoints[ 0 ]
@@ -226,10 +237,10 @@ console.log( 'dammit:' + [index1,index2,index3].join( ', ' ) );
 		return 1;
 	}
 
-	, drawChildren: function( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures, sizePoint ) {
+	, drawChildren: function( tb6, matrix, original, vertices, transformed, transformedNormal, pointNormals, transformedNormalPoints, hasBeenNormalModified, threshold, textures, sizePoint ) {
 		var count = 0;
 		for ( var i = 0 ; i < this.children.length ; i++ ) {
-			count += this.children[ i ].display( tb6, matrix, original, vertices, transformed, transformedNormal, threshold, textures, sizePoint );
+			count += this.children[ i ].display( tb6, matrix, original, vertices, transformed, transformedNormal, pointNormals, transformedNormalPoints, hasBeenNormalModified, threshold, textures, sizePoint );
 		}
 		return count;
 	}
@@ -243,7 +254,7 @@ SkyBox.prototype = {
 	, LEFT:   4
 	, RIGHT:  5
 
-	, init: function( splits, textures ) {
+	, init: function( splits, textures, flip ) {
 		if ( textures ) {
 			this.textures = textures;
 		} else {
@@ -289,6 +300,16 @@ SkyBox.prototype = {
 		this.split( splits );
 		this.normals();
 		this.makeWorkspace();
+
+		// this doesn't work...
+		if ( flip ) {
+			for ( var i = 0 ; i < this.faces.length ; i++ ) {
+				this.faces[ i ].normal.scale( -1 );
+			}
+			for ( var i = 0 ; i < this.vertices.length ; i++ ) {
+				this.pointNormals[ i ].scale( -1 );
+			}
+		}
 	}
 
 	, split: function( iterations ) {
@@ -301,6 +322,11 @@ SkyBox.prototype = {
 		for ( var i = 0 ; i < this.faces.length ; i++ ) {
 			this.faces[ i ].split( iterations, this.vertices, lookup );
 		}
+
+		this.pointNormals = [];
+		for ( var i = 0 ; i < this.vertices.length ; i++ ) {
+			this.pointNormals.push( new Point() );
+		}
 	}
 
 	, normals: function() {
@@ -308,17 +334,27 @@ SkyBox.prototype = {
 		var edge3 = new Point();
 		for ( var i = 0 ; i < this.faces.length ; i++ ) {
 			var face = this.faces[ i ];
-			face.calculateNormal( this.vertices, edge1, edge3 );
+			face.calculateNormal( this.vertices, this.pointNormals, edge1, edge3 );
+		}
+		for ( var i = 0 ; i < this.pointNormals.length ; i++ ) {
+			this.pointNormals[ i ].normalize();
 		}
 	}
 
 	, makeWorkspace: function() {
 		this.modifiedPoints = [];
 		this.hasBeenModified = [];
+
+		this.transformedNormalPoints = [];
+		this.hasBeenNormalModified = [];
+
 		// 3 point in the triangle and 1 for the normal
 		for ( var i = 0 ; i < this.vertices.length ; i++ ) {
 			this.modifiedPoints.push( new Point() );
 			this.hasBeenModified.push( false );
+
+			this.transformedNormalPoints.push( new Point() );
+			this.hasBeenNormalModified.push( false );
 		}
 		this.modifiedNormal = new Point();
 		this.sizePoint = new Point();
@@ -326,6 +362,8 @@ SkyBox.prototype = {
 
 	, display: function( tb6, matrix, threshold ) {
 		this.hasBeenModified.fill( false );
+		this.hasBeenNormalModified.fill( false );
+
 		var count = 0;
 
 		for ( var i = 0 ; i < this.faces.length ; i++ ) {
@@ -337,6 +375,9 @@ SkyBox.prototype = {
 				, this.modifiedPoints
 				, this.hasBeenModified
 				, this.modifiedNormal
+				, this.pointNormals
+				, this.transformedNormalPoints
+				, this.hasBeenNormalModified
 				, threshold
 				, this.textures
 				, this.sizePoint 
