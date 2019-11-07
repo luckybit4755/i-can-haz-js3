@@ -24,15 +24,12 @@ const TriangularB6Test = function() {
 		let tb6 = new TriangularB6( canvas );
 		tb6.clear();
 
-		let q = 0.1;
-		q = 0;
-		q = Math.sqrt(2)/2;
-		q = 0.2;
+		self.drawLameWater( tb6 );
 
+		let q = 0.1;
 		let u = 1;
 
 		let f = 2.0;
-f=0.7;
 		q *= f;
 		u *= f;
 
@@ -42,8 +39,22 @@ f=0.7;
 
 		let texture = self.makeTexture( canvas );
 		tb6.setTexture( texture );
-
 		self.split( tb6, point1, point2, point3, 1 );
+self.nasty( tb6 );
+
+		// tried to draw water, without much luck...
+		if ( false ) {
+			tb6.setTexture( false );
+
+			f = 2.0;
+			q *= f;
+			u *= f;
+
+			point1 = self.vertex( -u, +q, -u,  0,0,255 );
+			point2 = self.vertex( +u, +q, -u,  0,0,255 );
+			point3 = self.vertex(  0, -q, 0,  0,0,255 );
+			self.drawTriangle( tb6, point1, point2, point3 );
+		}
 
 		canvas.saveToJpg( jpeg, 'tb6.jpg' );
 		console.log( 'ok' );
@@ -51,15 +62,12 @@ f=0.7;
 
 	self.split = function( tb6, point1, point2, point3, level, theQ ) {
 		let max = 1;
-		max = 8;
-		max = 3;
-max = 5;
+		max = 7;
 
 		if ( level > max ) { 
-			//console.log( 'let us draw a triangle at level ' + level ); 
 			self.drawTriangle( tb6, point1, point2, point3 );
 		} else {
-			if ( self.random() < -0.02 ) { 
+			if ( self.random() < -0.10 ) { 
 				self.triangleSplit1( tb6, point1, point2, point3, level, theQ );
 			} else {
 				self.triangleSplit2( tb6, point1, point2, point3, level, theQ );
@@ -129,20 +137,13 @@ max = 5;
 	 *  3             2        3      1      2
 	 *
 	 */
-	self.triangleSplit2 = function( tb6, point1, point2, point3, level, theQ ) {
-		theQ = theQ || {uid:33}
+	self.cache = {uid:33,points:{},midpoints:{}}
+	self.triangleSplit2 = function( tb6, point1, point2, point3, level ) {
+		//self.drawTriangle( tb6, point1, point2, point3 );
 
 		let q = 0.8 / ( level * level );
 		let points = [ point1, point2, point3 ];
 		let midpoints = [];
-
-		// make sure each point has an id
-		for ( let i = 0 ; i < points.length ; i++ ) {
-			let point = points[ i ];
-			if ( !( 'id' in point ) ) {
-				point.id = theQ.uid++;
-			}
-		}
 
 		let froms = [];
 		
@@ -159,19 +160,18 @@ max = 5;
 				id2 = tmp;
 			}
 
+			// moved just for debugging...
 			let from = self.from( point, next );
 			froms.push( from );
-			// moved just for debugging...
 
 			let key = id1 + 'x' + id2;
-			if ( key in theQ ) {
-				let midpoint = theQ[ key ];
-				//self.log( 'q hit:', midpoint.vertex.value );
-				//midpoints.push( midpoint );
-				//continue;
-				// this cache caused a lot of problems...
-			} 
-
+			if ( !false ) { 
+				if ( key in self.cache.midpoints ) {
+					// this cache caused a lot of problems...
+					midpoints.push( self.cache.midpoints[ key ] );
+					continue;
+				} 
+			}
 
 			let x = point.x + from.x * 0.5;
 			let y = point.y + from.y * 0.5;
@@ -181,18 +181,32 @@ max = 5;
 			let b = point.b + from.b * 0.5;
 
 			let yi = q * self.random() - q * self.random();
+
+			// doesn't help...
+			//if ( key in theQ ) yi = theQ[ key ]; else theQ[ key ] = yi;
+
 			y += yi;
+
+			// doesn't help...
+			//if ( key in theQ ) y = theQ[ key ]; else theQ[ key ] = y;
 			
 			let midpoint = self.vertex( x,y,z, r,g, b );
+			self.cache.midpoints[ key ] = midpoint;
 			//self.log( point, 'to', next, 'midpoint is', midpoint );
 			midpoints.push( midpoint );
 
-			theQ[ key ] = midpoint;
+			//theQ[ key ] = midpoint;
 		}
 
 		let midpt1 = midpoints[ 0 ];
 		let midpt2 = midpoints[ 1 ];
 		let midpt3 = midpoints[ 2 ];
+/*
+t[ 0 ] =  pt1, mid1, mid3
+t[ 1 ] = mid1,  pt2, mid2
+t[ 2 ] = mid3, mid2,  pt3 ???
+t[ 3 ] = mid1, mid2, mid3
+*/
 			
 if( self.samesies( tb6, point1, midpt1, midpt3 ) ) console.log( 'samsies a' ); else
 		self.split( tb6, point1, midpt1, midpt3, level + 1 ); // a
@@ -201,7 +215,8 @@ if( self.samesies( tb6, midpt1, point2, midpt2 ) ) console.log( 'samsies b' ); e
 		self.split( tb6, midpt1, point2, midpt2, level + 1 ); // b
 
 if( self.samesies( tb6, midpt2, point3, midpt3 ) ) console.log( 'samsies c' ); else
-		self.split( tb6, midpt2, point3, midpt3, level + 1 ); // c
+		self.split( tb6, midpt3, midpt2, point3, level + 1 ); // c ???
+		//self.split( tb6, midpt2, point3, midpt3, level + 1 ); // c
 
 if( self.samesies( tb6, midpt1, midpt2, midpt3 ) ) {
 	console.log( 'samsies d' ); 
@@ -230,59 +245,45 @@ if( self.samesies( tb6, midpt1, midpt2, midpt3 ) ) {
 		return same;
 	}
 
-	//snit
-	self.tid = 0;
+	self._triangles = [];
 	self.drawTriangle = function( tb6, point1, point2, point3 ) {
+self.log( 'fck', point1.id, point2.id, point3.id );
+		return self._triangles.push( [point1.id, point2.id, point3.id] );
+
 		let normal = self.xyzzy( point1, point2, point3 );
 
-tb6.setTexture( false );
-tb6.shadingMethod = 5;
 		let screened1 = self.toScreen( point1 );
 		let screened2 = self.toScreen( point2 );
 		let screened3 = self.toScreen( point3 );
 
-		let t1 = self.appendix( screened1 );
-		let t2 = self.appendix( screened2 );
-		let t3 = self.appendix( screened3 );
-
-		
-		self.tid++;
-		//if (  self.tid != 8 ) return;
-
-
-		let sss = [ screened1, screened2, screened3 ];
-		for ( let i = 0 ; i < sss.length ; i++ ) {
-			let s = sss[ i ];
-			s.r = Math.floor( 256 * Math.random() );
-			s.g = Math.floor( 256 * Math.random() );
-			s.b = Math.floor( 256 * Math.random() );
-		}
-
-
 		let pixelsDrawn = tb6.triangleDraw( screened1, screened2, screened3, normal );
-
-		if ( t1 === t2 && t2 === t3 ) {
-			console.log( 'wtf? ' + t1 );
-			console.log( 'zig:' + pixelsDrawn );
-
-			let index = screened1.x + screened1.y * self.width;
-			index *= 4;
-			tb6.imageData.data[ index++ ] = 255;
-			tb6.imageData.data[ index++ ] = 0;
-			tb6.imageData.data[ index++ ] = 0;
-			tb6.imageData.data[ index++ ] = 255;
-
-		}
-
-
-		self.drawCount++;
-		console.log( self.drawCount + ' and ' + tb6.drawCount );
-		
 	};
-	self.drawCount = 0;
+	self.nasty = function( tb6 ) {
+		for ( let i = 0 ; i < self._triangles.length ; i++ ) {
+			let ids = self._triangles[ i ];
+			self.log( 'shit', ids );
+			let point1 = self.cache.points[ ids[ 0 ] ]
+			let point2 = self.cache.points[ ids[ 1 ] ]
+			let point3 = self.cache.points[ ids[ 2 ] ]
+
+			self.log( 'n1', point1, 'id:', ids[ 0 ] );
+			self.log( 'n2', point2, 'id:', ids[ 2 ] );
+			self.log( 'n3', point3, 'id:', ids[ 2 ] );
+
+			let normal = self.xyzzy( point1, point2, point3 );
+
+			let screened1 = self.toScreen( point1 );
+			let screened2 = self.toScreen( point2 );
+			let screened3 = self.toScreen( point3 );
+
+			let pixelsDrawn = tb6.triangleDraw( screened1, screened2, screened3, normal );
+		}
+	}
 
 	self.vertex = function( x, y, z, r, g, b ) {
-		return { x:x, y:y, z:z, r:r, g:g, b:b };
+		let v = { x:x, y:y, z:z, r:r, g:g, b:b, id:self.cache.uid++ };
+		self.cache.points[ v.id ] = v;
+		return v;
 	};
 
 	self.toScreen = function( point ) {
@@ -294,9 +295,6 @@ tb6.shadingMethod = 5;
 			, g: self.into( point.g, 256  )
 			, b: self.into( point.b, 256  )
 		}
-
-		screened.r = 255;
-		screened.g = screened.b = 0;
 
 		return screened;
 	};
@@ -447,10 +445,22 @@ tb6.shadingMethod = 5;
 				s = lulz;
 				break;
 			default:
-				console.log( 'idk:' + type );
+				//console.log( 'idk:' + type );
 				return lulz;
 		};
 		return s;
+	}
+
+	self.drawLameWater = function( tb6 ) {
+		let i = 0;
+		for ( let y = 0 ; y < self.height ; y++ ) {
+			for ( let x = 0 ; x < self.width ; x++ ) {
+				tb6.imageData.data[ i++ ] = 0;
+				tb6.imageData.data[ i++ ] = y < self.height / 2 ? 255 : 0;
+				tb6.imageData.data[ i++ ] = 255;
+				tb6.imageData.data[ i++ ] = 255;
+			}
+		}
 	}
 };
 
