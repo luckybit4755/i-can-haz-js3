@@ -13,7 +13,8 @@ const TriangularB6Test = function() {
 	const self = this;
 	self.width = 1024;
 	self.height = 1024;
-	self.cache = {uid:33,points:{},midpoints:{},triangles:[]}
+
+	self.cache = { uid:33, points:{}, midpoints:{} };
 	
 	self.random = function() {
 		return Math.random();
@@ -42,27 +43,13 @@ const TriangularB6Test = function() {
 		tb6.setTexture( texture );
 		self.split( tb6, point1, point2, point3, 1 );
 
-		// tried to draw water, without much luck...
-		if ( false ) {
-			tb6.setTexture( false );
-
-			f = 2.0;
-			q *= f;
-			u *= f;
-
-			point1 = self.vertex( -u, +q, -u,  0,0,255 );
-			point2 = self.vertex( +u, +q, -u,  0,0,255 );
-			point3 = self.vertex(  0, -q, 0,  0,0,255 );
-			self.drawTriangle( tb6, point1, point2, point3 );
-		}
-
 		canvas.saveToJpg( jpeg, 'tb6.jpg' );
 		console.log( 'ok' );
 	};
 
 	self.split = function( tb6, point1, point2, point3, level, theQ ) {
 		let max = 1;
-		max = 7;
+		max = 8;
 
 		if ( level > max ) { 
 			self.drawTriangle( tb6, point1, point2, point3 );
@@ -142,8 +129,6 @@ const TriangularB6Test = function() {
 		let points = [ point1, point2, point3 ];
 		let midpoints = [];
 
-		let froms = [];
-		
 		for ( let i = 0 ; i < points.length ; i++ ) {
 			let point = points[ i ];
 			let next = points[ ( i + 1 ) % points.length ];
@@ -157,10 +142,6 @@ const TriangularB6Test = function() {
 				id2 = tmp;
 			}
 
-			// moved just for debugging...
-			let from = self.from( point, next );
-			froms.push( from );
-
 			let key = id1 + 'x' + id2;
 			if ( !false ) { 
 				if ( key in self.cache.midpoints ) {
@@ -170,24 +151,20 @@ const TriangularB6Test = function() {
 				} 
 			}
 
-			let x = point.x + from.x * 0.5;
-			let y = point.y + from.y * 0.5;
-			let z = point.z + from.z * 0.5;
-			let r = point.r + from.r * 0.5;
-			let g = point.g + from.g * 0.5;
-			let b = point.b + from.b * 0.5;
+			// moved just for debugging...
+			let from = self.from( point, next );
+			let tmp = {};
+			for ( let k in point ) {
+				tmp[ k ] = point[ k ] + from[ k ] * 0.5;
+			}
 
 			let yi = q * self.random() - q * self.random();
+			tmp.y += yi;
+			tmp.x += yi * 0.2;
+			tmp.z += yi * 0.2;
 
-			// doesn't help...
-			//if ( key in theQ ) yi = theQ[ key ]; else theQ[ key ] = yi;
+			let midpoint = self.vertex( tmp.x, tmp.y, tmp.z, tmp.r, tmp.g, tmp.b );
 
-			y += yi;
-
-			// doesn't help...
-			//if ( key in theQ ) y = theQ[ key ]; else theQ[ key ] = y;
-			
-			let midpoint = self.vertex( x,y,z, r,g, b );
 			self.cache.midpoints[ key ] = midpoint;
 			midpoints.push( midpoint );
 		}
