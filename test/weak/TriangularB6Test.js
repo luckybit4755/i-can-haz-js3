@@ -11,17 +11,16 @@ const CanvasHack = require( '../common/CanvasHack' );
 
 const TriangularB6Test = function() {
 	const self = this;
-
-	self.vertex = function( x, y, z ) {
-		return { value:[ [x],[y],[z] ] };
-	};
-
-	self.point = function( s, t, x, y, z ) {
-		return { s:s, t:t, vertex:self.vertex( x, y, z ) };
-	};
+	self.width = 1024;
+	self.height = 1024;
+	
+	self.random = function() {
+		return Math.random();
+		return 0.5;
+	}
 
 	self.main = function( args ) {
-		let canvas = CanvasHack.create( 1024, 1024 );
+		let canvas = CanvasHack.create( self.width, self.height );
 		let tb6 = new TriangularB6( canvas );
 		tb6.clear();
 
@@ -33,33 +32,37 @@ const TriangularB6Test = function() {
 		let u = 1;
 
 		let f = 2.0;
+f=0.7;
 		q *= f;
 		u *= f;
 
-		let point1 = self.point( 0, 0,   -u, +q, +u );
-		let point2 = self.point( 1, 0,   +u, +q, +u );
-		let point3 = self.point( 0, 1,    0, -q,  0 );
+		let point1 = self.vertex( -u, +q, +u,  0, 0, 1 );
+		let point2 = self.vertex( +u, +q, +u,  1, 0, 0 );
+		let point3 = self.vertex(  0, -q,  0,  0, 1, 0 );
 
 		let texture = self.makeTexture( canvas );
+		tb6.setTexture( texture );
 
-		self.split( tb6, texture, point1, point2, point3, 1 );
+		self.split( tb6, point1, point2, point3, 1 );
 
 		canvas.saveToJpg( jpeg, 'tb6.jpg' );
 		console.log( 'ok' );
 	};
 
-	self.split = function( tb6, texture, point1, point2, point3, level, theQ ) {
+	self.split = function( tb6, point1, point2, point3, level, theQ ) {
 		let max = 1;
 		max = 8;
+		max = 3;
+max = 5;
 
 		if ( level > max ) { 
 			//console.log( 'let us draw a triangle at level ' + level ); 
-			self.drawTriangle( tb6, texture, point1, point2, point3 );
+			self.drawTriangle( tb6, point1, point2, point3 );
 		} else {
-			if ( Math.random() < -0.02 ) { 
-				self.triangleSplit1( tb6, texture, point1, point2, point3, level, theQ );
+			if ( self.random() < -0.02 ) { 
+				self.triangleSplit1( tb6, point1, point2, point3, level, theQ );
 			} else {
-				self.triangleSplit2( tb6, texture, point1, point2, point3, level, theQ );
+				self.triangleSplit2( tb6, point1, point2, point3, level, theQ );
 			}
 		}
 	}
@@ -77,34 +80,22 @@ const TriangularB6Test = function() {
 	 * `___________'         `/_________\'
 	 *
 	 */
-	self.triangleSplit1 = function( tb6, texture, point1, point2, point3, level, theQ ) {
-		let points = [ point1, point2, point3 ];
-		let pointz = [];
-		let midPoint = [0,0,0];
-		let s = 0;
-		let t = 0;
-		for ( let i = 0 ; i < points.length ; i++ ) {
-			let point = points[ i ];
-			pointz[ i ] = [];
-			for ( let j = 0 ; j < 3 ; j++ ) {
-				pointz[ j ] = point.vertex.value[ j ][ 0 ];
-				midPoint[ j ] += pointz[ j ] / 3;
-			}
-			s += point.s;
-			t += point.t 
+	self.triangleSplit1 = function( tb6, point1, point2, point3, level, theQ ) {
+		let midpoint = {
+			  x: ( point1.x + point2.x + point3.x ) / 3
+			, y: ( point1.y + point2.y + point3.y ) / 3
+			, z: ( point1.z + point2.z + point3.z ) / 3
+			, r: ( point1.r + point2.r + point3.r ) / 3
+			, g: ( point1.g + point2.g + point3.g ) / 3
+			, b: ( point1.b + point2.b + point3.b ) / 3
 		}
-		s /= 3;
-		t /= 3;
-
+			 
 		let normal = self.xyzzy( point1, point2, point3 );
-		//normal.value = [[0],[-1],[0]];
-		self.log( 'at level', level, 'normal is', normal.value );
+		self.log( 'at level', level, 'normal is', normal );
 
-		let nu = [];
-
-		let qzar = 0.1 + 0.2 * Math.random();
-		qzar = 0.3 + 0.7 * Math.random();
-		if ( Math.random() < 0.33 ) {
+		let qzar = 0.1 + 0.2 * self.random();
+		qzar = 0.3 + 0.7 * self.random();
+		if ( self.random() < 0.33 ) {
 			qzar = -qzar;
 		}
 
@@ -112,15 +103,15 @@ const TriangularB6Test = function() {
 
 		q /= ( level * level ); // exponential decay
 
-		for ( let j = 0 ; j < 3 ; j++ ) {
-			nu[ j ] = midPoint[ j ] + normal.value[ j ][ 0 ] * q;
-		}
+		let nu = {
+			  x: midpoint.x + normal.x * q
+			, y: midpoint.y + normal.y * q
+			, z: midpoint.z + normal.z * q
+		};
 
-		let nuPoint = self.point( s, t, nu[ 0 ], nu[ 1 ], nu[ 2 ] );
-
-		self.split( tb6, texture, point1, point2, nuPoint, level + 1, theQ );
-		self.split( tb6, texture, point2, point3, nuPoint, level + 1, theQ );
-		self.split( tb6, texture, point3, point1, nuPoint, level + 1, theQ );
+		self.split( tb6, point1, point2, nu, level + 1, theQ );
+		self.split( tb6, point2, point3, nu, level + 1, theQ );
+		self.split( tb6, point3, point1, nu, level + 1, theQ );
 	}
 
 	/**
@@ -131,127 +122,224 @@ const TriangularB6Test = function() {
 	 *         ^                      ^       
 	 *        / \                    / \      
 	 *       /   \                  / a \     
-	 *      /     \      --->     2x-----x0
-	 *     /       \              / \ d / \   
-	 *    /         \            / c \ / b \  
+	 *      /     \      --->    2 x-----x 0      0:midpt1
+	 *     /       \              / \ d / \       1:midpt2
+	 *    /         \            / c \ / b \      2:midpt3 
 	 *   `___________'          `_____x_____' 
 	 *  3             2        3      1      2
 	 *
 	 */
-	self.triangleSplit2 = function( tb6, texture, point1, point2, point3, level, theQ ) {
+	self.triangleSplit2 = function( tb6, point1, point2, point3, level, theQ ) {
 		theQ = theQ || {uid:33}
 
 		let q = 0.8 / ( level * level );
 		let points = [ point1, point2, point3 ];
 		let midpoints = [];
 
+		// make sure each point has an id
 		for ( let i = 0 ; i < points.length ; i++ ) {
 			let point = points[ i ];
 			if ( !( 'id' in point ) ) {
 				point.id = theQ.uid++;
 			}
 		}
+
+		let froms = [];
 		
 		for ( let i = 0 ; i < points.length ; i++ ) {
 			let point = points[ i ];
 			let next = points[ ( i + 1 ) % points.length ];
 
-			let key = point.id + 'x' + next.id;
+			let id1 = point.id;
+			let id2 = next.id;
+
+			if ( id2 < id1 ) {
+				let tmp = id1;
+				id1 = id2;
+				id2 = tmp;
+			}
+
+			let from = self.from( point, next );
+			froms.push( from );
+			// moved just for debugging...
+
+			let key = id1 + 'x' + id2;
 			if ( key in theQ ) {
 				let midpoint = theQ[ key ];
 				//self.log( 'q hit:', midpoint.vertex.value );
-				midpoints.push( midpoint );
-				continue;
+				//midpoints.push( midpoint );
+				//continue;
+				// this cache caused a lot of problems...
 			} 
 
-			let from = self.from( point, next );
-			let s = point.s + 0.5 * ( next.s - point.s )
-			let t = point.t + 0.5 * ( next.t - point.t )
-			let x = point.vertex.value[ 0 ][ 0 ] + from[ 0 ] * 0.5;
-			let y = point.vertex.value[ 1 ][ 0 ] + from[ 1 ] * 0.5;
-			let z = point.vertex.value[ 2 ][ 0 ] + from[ 2 ] * 0.5;
 
-			y += q * Math.random() - q * Math.random();
+			let x = point.x + from.x * 0.5;
+			let y = point.y + from.y * 0.5;
+			let z = point.z + from.z * 0.5;
+			let r = point.r + from.r * 0.5;
+			let g = point.g + from.g * 0.5;
+			let b = point.b + from.b * 0.5;
+
+			let yi = q * self.random() - q * self.random();
+			y += yi;
 			
-			let midpoint = self.point( s, t, x, y, z );
-			//self.log( point.vertex.value, 'to', next.vertex.value, 'midpoint is', midpoint.vertex.value );
+			let midpoint = self.vertex( x,y,z, r,g, b );
+			//self.log( point, 'to', next, 'midpoint is', midpoint );
 			midpoints.push( midpoint );
 
 			theQ[ key ] = midpoint;
 		}
+
+		let midpt1 = midpoints[ 0 ];
+		let midpt2 = midpoints[ 1 ];
+		let midpt3 = midpoints[ 2 ];
 			
-		self.split( tb6, texture, point1, midpoints[ 0 ], midpoints[ 2 ], level + 1 ); // a
-		self.split( tb6, texture, midpoints[ 0 ], point2, midpoints[ 1 ], level + 1 ); // b
-		self.split( tb6, texture, midpoints[ 1 ], point3, midpoints[ 2 ], level + 1 ); // c
-		self.split( tb6, texture, midpoints[ 0 ], midpoints[ 1 ], midpoints[ 2 ], level + 1 ); // d
+if( self.samesies( tb6, point1, midpt1, midpt3 ) ) console.log( 'samsies a' ); else
+		self.split( tb6, point1, midpt1, midpt3, level + 1 ); // a
+
+if( self.samesies( tb6, midpt1, point2, midpt2 ) ) console.log( 'samsies b' ); else
+		self.split( tb6, midpt1, point2, midpt2, level + 1 ); // b
+
+if( self.samesies( tb6, midpt2, point3, midpt3 ) ) console.log( 'samsies c' ); else
+		self.split( tb6, midpt2, point3, midpt3, level + 1 ); // c
+
+if( self.samesies( tb6, midpt1, midpt2, midpt3 ) ) {
+	console.log( 'samsies d' ); 
+	self.log( 'bonner.1_', point1 )
+	self.log( 'bonner.1>', midpt1 )
+	self.log( 'bonner.2-', point2 );
+	self.log( 'bonner.2>', midpt2 );
+	self.log( 'bonner.3_', point3 );
+	self.log( 'bonner.3>', midpt3 );
+	self.log( 'bonner.1_', point1 )
+	self.log( 'bonner................................^^^' )
+} else {
+		self.split( tb6, midpt1, midpt2, midpt3, level + 1 ); // d
+}
 	};
 
-	self.drawTriangle = function( tb6, texture, point1, point2, point3 ) {
+	self.samesies = function( tb6, point1, point2, point3 ) {
+		let s1 = self.appendix( point1 )
+		let s2 = self.appendix( point2 );
+		let s3 = self.appendix( point3 );
+		let same = ( s1 === s2 && s2 === s3 );
+		if ( same ) {
+			self.drawTriangle( tb6, point1, point2, point3 );
+		}
+
+		return same;
+	}
+
+	//snit
+	self.tid = 0;
+	self.drawTriangle = function( tb6, point1, point2, point3 ) {
 		let normal = self.xyzzy( point1, point2, point3 );
-		//if ( normal.value[ 2 ][ 0 ] < 0 ) return;
 
-		let min = 0.02;
-		for ( let i = 0 ; i < normal.value.length ; i++ ) {
-			if ( min > normal.value[ i ][ 0 ] ) {
-				normal.value[ i ][ 0 ] = min;
-			}
+tb6.setTexture( false );
+tb6.shadingMethod = 5;
+		let screened1 = self.toScreen( point1 );
+		let screened2 = self.toScreen( point2 );
+		let screened3 = self.toScreen( point3 );
+
+		let t1 = self.appendix( screened1 );
+		let t2 = self.appendix( screened2 );
+		let t3 = self.appendix( screened3 );
+
+		
+		self.tid++;
+		//if (  self.tid != 8 ) return;
+
+
+		let sss = [ screened1, screened2, screened3 ];
+		for ( let i = 0 ; i < sss.length ; i++ ) {
+			let s = sss[ i ];
+			s.r = Math.floor( 256 * Math.random() );
+			s.g = Math.floor( 256 * Math.random() );
+			s.b = Math.floor( 256 * Math.random() );
 		}
 
-		// brighten things up a bit...
-		if ( false ) {
-			let brighten = 0.4; // should be less that 0.5, closer to zero is brighter
-			normal.value[ 0 ][ 0 ] = Math.pow( normal.value[ 0 ][ 0 ], brighten );
-			normal.value[ 1 ][ 0 ] = Math.pow( normal.value[ 1 ][ 0 ], brighten );
-			normal.value[ 2 ][ 0 ] = Math.pow( normal.value[ 2 ][ 0 ], brighten );
+
+		let pixelsDrawn = tb6.triangleDraw( screened1, screened2, screened3, normal );
+
+		if ( t1 === t2 && t2 === t3 ) {
+			console.log( 'wtf? ' + t1 );
+			console.log( 'zig:' + pixelsDrawn );
+
+			let index = screened1.x + screened1.y * self.width;
+			index *= 4;
+			tb6.imageData.data[ index++ ] = 255;
+			tb6.imageData.data[ index++ ] = 0;
+			tb6.imageData.data[ index++ ] = 0;
+			tb6.imageData.data[ index++ ] = 255;
+
 		}
 
-		//normal.value[ 0 ][ 0 ] = normal.value[ 1 ][ 0 ] = normal.value[ 2 ][ 0 ] = 1;
-		
-		point1.normal = point2.normal = point3.normal = normal;
 
-		let tmp = self.vertex( 1,1,1 );
-		normal = point1.normal = point2.normal = point3.normal = tmp;
+		self.drawCount++;
+		console.log( self.drawCount + ' and ' + tb6.drawCount );
 		
-		tb6.jack( point1, point2, point3, normal, texture );
+	};
+	self.drawCount = 0;
+
+	self.vertex = function( x, y, z, r, g, b ) {
+		return { x:x, y:y, z:z, r:r, g:g, b:b };
+	};
+
+	self.toScreen = function( point ) {
+		let screened = {
+			  x: self.into( point.x, 1024 )
+			, y: self.into( point.y, 1024 )
+			, z: self.into( point.z, 1024 )
+			, r: self.into( point.r, 256  )
+			, g: self.into( point.g, 256  )
+			, b: self.into( point.b, 256  )
+		}
+
+		screened.r = 255;
+		screened.g = screened.b = 0;
+
+		return screened;
+	};
+	
+	self.into = function( r, i ) {
+		return Math.floor( i * 0.5  + i * 0.5 * r );
 	};
 
 	self.xyzzy = function( point1, point2, point3 ) {
-		let x = 0;
-		let y = 1;
-		let z = 2;
 		let a = self.normallyFrom( point2, point1 );
 		let b = self.normallyFrom( point2, point3 );
-		let crossed = self.normalize(
-			  ( a[y] * b[z] ) - ( a[z] * b[y] )  // x=yzzy
-			, ( a[z] * b[x] ) - ( a[x] * b[z] )  // y=zxxz
-			, ( a[x] * b[y] ) - ( a[y] * b[x] )  // z=xyyx
+		return self.normalize(
+			{
+				  x: ( a.y * b.z ) - ( a.z * b.y ) // x:yzzy
+				, y: ( a.z * b.x ) - ( a.x * b.z ) // y:zxxz
+				, z: ( a.x * b.y ) - ( a.y * b.x ) // z:xyyx
+			}
 		);
-		return self.vertex( crossed[ x ], crossed[ y ], crossed[ z ] );
 	};
 
 	self.normallyFrom = function( start, stop ) {
-		let from = self.from( start, stop );
-		return self.normalize( from[ 0 ], from[ 1 ], from[ 2 ] );
+		return self.normalize( self.from( start, stop ) );
 	};
 
 	self.from = function( start, stop ) {
-		return [
-			  stop.vertex.value[ 0 ][ 0 ] - start.vertex.value[ 0 ][ 0 ]
-			, stop.vertex.value[ 1 ][ 0 ] - start.vertex.value[ 1 ][ 0 ]
-			, stop.vertex.value[ 2 ][ 0 ] - start.vertex.value[ 2 ][ 0 ]
-		]
+		let from = {};
+		for ( let key in start ) {
+			if ( key in stop ) {
+				from[ key ] = stop[ key ] - start[ key ];
+			}
+		}
+		return from;
 	};
 
-	self.normalize = function( x, y, z ) {
-		let s = ( x * x ) + ( y * y ) + ( z * z );
+	self.normalize = function( point ) {
+		let s = ( point.x * point.x ) + ( point.y * point.y ) + ( point.z * point.z );
 		if ( 0 === s ) {
 			s = 1;
 		} else {
 			s = Math.sqrt( s );
 		}
 
-		let normalized = [ x/s, y/s, z/s ];
-		return normalized;
+		return self.vertex( point.x / s, point.y / s, point.z / s );
 	};
 
 	self.makeTexture = function( canvas ) {
@@ -303,6 +391,10 @@ const TriangularB6Test = function() {
 
 	self.appendix = function( lulz ) {
 		let s = '';
+
+		if ( Number.isInteger( lulz ) ) {
+			lulz += 0.00000000001; // we all float down here
+		}
 		
 		let type = typeof( lulz );
 		if ( util.isArray( lulz ) ) {
@@ -337,13 +429,19 @@ const TriangularB6Test = function() {
 						return '+' + lulz;
 					}
 				} 
-				let precision = 1000;
+				let precision = 100000;
 				lulz = Math.floor( precision * lulz ) / precision;
 				if ( lulz < 0 ) {
-					s = lulz;
+					s = '' + lulz;
 				} else {
 					s = '+' + lulz;
 				}
+
+				if ( -1 == s.indexOf( '.' ) ) {
+					s += '.';
+				}
+				while ( s.length < 8 ) s += '0';
+
 				break;
 			case 'string':
 				s = lulz;
