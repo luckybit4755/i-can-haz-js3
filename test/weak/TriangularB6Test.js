@@ -13,6 +13,7 @@ const TriangularB6Test = function() {
 	const self = this;
 	self.width = 1024;
 	self.height = 1024;
+	self.cache = {uid:33,points:{},midpoints:{},triangles:[]}
 	
 	self.random = function() {
 		return Math.random();
@@ -40,7 +41,6 @@ const TriangularB6Test = function() {
 		let texture = self.makeTexture( canvas );
 		tb6.setTexture( texture );
 		self.split( tb6, point1, point2, point3, 1 );
-self.nasty( tb6 );
 
 		// tried to draw water, without much luck...
 		if ( false ) {
@@ -137,10 +137,7 @@ self.nasty( tb6 );
 	 *  3             2        3      1      2
 	 *
 	 */
-	self.cache = {uid:33,points:{},midpoints:{}}
-	self.triangleSplit2 = function( tb6, point1, point2, point3, level ) {
-		//self.drawTriangle( tb6, point1, point2, point3 );
-
+	self.triangleSplit2 = function( tb6, point1, point2, point3, level, theQ ) {
 		let q = 0.8 / ( level * level );
 		let points = [ point1, point2, point3 ];
 		let midpoints = [];
@@ -192,64 +189,19 @@ self.nasty( tb6 );
 			
 			let midpoint = self.vertex( x,y,z, r,g, b );
 			self.cache.midpoints[ key ] = midpoint;
-			//self.log( point, 'to', next, 'midpoint is', midpoint );
 			midpoints.push( midpoint );
-
-			//theQ[ key ] = midpoint;
 		}
 
 		let midpt1 = midpoints[ 0 ];
 		let midpt2 = midpoints[ 1 ];
 		let midpt3 = midpoints[ 2 ];
-/*
-t[ 0 ] =  pt1, mid1, mid3
-t[ 1 ] = mid1,  pt2, mid2
-t[ 2 ] = mid3, mid2,  pt3 ???
-t[ 3 ] = mid1, mid2, mid3
-*/
-			
-if( self.samesies( tb6, point1, midpt1, midpt3 ) ) console.log( 'samsies a' ); else
 		self.split( tb6, point1, midpt1, midpt3, level + 1 ); // a
-
-if( self.samesies( tb6, midpt1, point2, midpt2 ) ) console.log( 'samsies b' ); else
 		self.split( tb6, midpt1, point2, midpt2, level + 1 ); // b
-
-if( self.samesies( tb6, midpt2, point3, midpt3 ) ) console.log( 'samsies c' ); else
-		self.split( tb6, midpt3, midpt2, point3, level + 1 ); // c ???
-		//self.split( tb6, midpt2, point3, midpt3, level + 1 ); // c
-
-if( self.samesies( tb6, midpt1, midpt2, midpt3 ) ) {
-	console.log( 'samsies d' ); 
-	self.log( 'bonner.1_', point1 )
-	self.log( 'bonner.1>', midpt1 )
-	self.log( 'bonner.2-', point2 );
-	self.log( 'bonner.2>', midpt2 );
-	self.log( 'bonner.3_', point3 );
-	self.log( 'bonner.3>', midpt3 );
-	self.log( 'bonner.1_', point1 )
-	self.log( 'bonner................................^^^' )
-} else {
+		self.split( tb6, midpt2, point3, midpt3, level + 1 ); // c
 		self.split( tb6, midpt1, midpt2, midpt3, level + 1 ); // d
-}
 	};
 
-	self.samesies = function( tb6, point1, point2, point3 ) {
-		let s1 = self.appendix( point1 )
-		let s2 = self.appendix( point2 );
-		let s3 = self.appendix( point3 );
-		let same = ( s1 === s2 && s2 === s3 );
-		if ( same ) {
-			self.drawTriangle( tb6, point1, point2, point3 );
-		}
-
-		return same;
-	}
-
-	self._triangles = [];
 	self.drawTriangle = function( tb6, point1, point2, point3 ) {
-self.log( 'fck', point1.id, point2.id, point3.id );
-		return self._triangles.push( [point1.id, point2.id, point3.id] );
-
 		let normal = self.xyzzy( point1, point2, point3 );
 
 		let screened1 = self.toScreen( point1 );
@@ -258,27 +210,6 @@ self.log( 'fck', point1.id, point2.id, point3.id );
 
 		let pixelsDrawn = tb6.triangleDraw( screened1, screened2, screened3, normal );
 	};
-	self.nasty = function( tb6 ) {
-		for ( let i = 0 ; i < self._triangles.length ; i++ ) {
-			let ids = self._triangles[ i ];
-			self.log( 'shit', ids );
-			let point1 = self.cache.points[ ids[ 0 ] ]
-			let point2 = self.cache.points[ ids[ 1 ] ]
-			let point3 = self.cache.points[ ids[ 2 ] ]
-
-			self.log( 'n1', point1, 'id:', ids[ 0 ] );
-			self.log( 'n2', point2, 'id:', ids[ 2 ] );
-			self.log( 'n3', point3, 'id:', ids[ 2 ] );
-
-			let normal = self.xyzzy( point1, point2, point3 );
-
-			let screened1 = self.toScreen( point1 );
-			let screened2 = self.toScreen( point2 );
-			let screened3 = self.toScreen( point3 );
-
-			let pixelsDrawn = tb6.triangleDraw( screened1, screened2, screened3, normal );
-		}
-	}
 
 	self.vertex = function( x, y, z, r, g, b ) {
 		let v = { x:x, y:y, z:z, r:r, g:g, b:b, id:self.cache.uid++ };
