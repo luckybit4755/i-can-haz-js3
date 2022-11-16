@@ -8,6 +8,8 @@ Nonetheless, perhaps it is somewhat interesting.
 
 Warning: some of this is completely nuts.
 
+[Live demo](https://luckybit4755.github.io/i-can-haz-js3/)
+
 ![image](images/EIVufW0.png)
 ![image](images/jL6o0AE.png)
 ![image](images/Uk7VzEN.png)
