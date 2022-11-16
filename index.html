@@ -12,7 +12,7 @@
 			}
 			a {
 				color:#225;
-				text-decoration:none;
+				xtext-decoration:none;
 			}
 			h2 {
 				font-size:144%;
@@ -41,41 +41,50 @@
 			}
 		</style>
 		<script>
-			window.onload = function() {
-				var tmi = document.getElementById( 'tmi' );
-				tmi.onclick = function() { tmi.style.display = 'none'; }
-				
-				var images = document.getElementsByTagName( 'img' );
-				for ( var i = 0 ; i < images.length ; i++ ) {
-					( 
-						function( image ) {
-							image.onclick = function() {
-								tmi.style.backgroundImage = 'url(' + image.src + ')';
-								console.log( image );
-								tmi.style.display = 'block';
-							}
-						}
-					)( images[ i ] );
-				}
-				document.body.onkeypress = function( e ) {
-					console.log( e );
+			window.addEventListener('load',()=>{
+				const tmi = document.getElementById( 'tmi' );
+				tmi.addEventListener( 'click', () => tmi.style.display = 'none' );
+				tmi.image = (src) => {
+					if ( !src || 'block' === tmi.style.display ) {
+						tmi.style.display = 'none';
+					} else {
+						tmi.style.backgroundImage = 'url(' + src + ')';
+						tmi.style.display = 'block';
+					}
+				};
+
+				for ( const image of Array.from( document.getElementsByTagName( 'img' ) ) ) {
+					image.addEventListener( 'click', ()=> tmi.image( image.src ) );
 				}
 
-			}
+				document.body.addEventListener( 'keydown', (e)=>{
+					if ( /Escape/i.test(e.key) ) { 
+						tmi.image( null );
+					}
+				});
+			});
 		</script>
 	</HEAD>
 	<BODY>
 		<h2>Demos</h2>
-
+			<p>
+				<a href="https://github.com/luckybit4755/i-can-haz-js3">i-can-haz-js3</a>
+				is a small scale software-only 3d engine based on a six dimensional Bresenham implementation from
+				<a href="https://sites.google.com/site/proyectosroboticos/bresenham/bresenham-6d">proyectosroboticos</a>
+				The dimensions are the typical xyz + texture space.
+			</p>
+			<p>
+				The code style is quirky and based on an older style I've long abandoned.
+				Nonetheless, perhaps it is somewhat interesting.
+			</p>
 		<div>
 			<h3>BxoTest</h3>
 			<p>
-				<a href="test/util/BxoTest.html" target="BxoTest">
-					BxoTest demonstrates shading, texturing, and 
+				<a href="test/util/BxoTest.html" target="BxoTest">BxoTest</a>
+					demonstrates shading, texturing, and 
 					rotation. A rotating objects shifts from a cube
 					to a spheroid and back again. Tons of crazy 
 					controls.
-				</a>
 			</p>
 			<p>
 				<img src="images/EIVufW0.png"/>
@@ -85,12 +94,11 @@
 		<div>
 			<h3>SkyboxTest</h3>
 			<p>
-				<a href="test/util/SkyboxTest.html" target="SkyboxTest">
-			   		SkyboxTest demonstrates a sphere rendered at different 
+				<a href="test/util/SkyboxTest.html" target="SkyboxTest">SkyboxTest</a>
+			   		demonstrates a sphere rendered at different 
 					level of detail (LOD). More polygons are used when the 
 					object occupies more screen real estate and fewer when 
 					it is smaller.  
-				</a>
 			</p>
 			<p>
 				<img src="images/jL6o0AE.png"/>
